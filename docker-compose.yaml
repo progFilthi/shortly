@@ -1,0 +1,65 @@
+services:
+  # =========================================================================
+  # POSTGRESQL (Databases per Service)
+  # =========================================================================
+  postgres:
+    image: postgres:18-alpine
+    container_name: shortly-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: shortly_admin
+      POSTGRES_PASSWORD: shortly_password
+      POSTGRES_DB: auth_db # Default initial database
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docs/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shortly_admin -d auth_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # =========================================================================
+  # REDIS (Caching & Feed Caching)
+  # =========================================================================
+  redis:
+    image: redis:latest
+    container_name: shortly-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # =========================================================================
+  # RABBITMQ (Async Messaging & Event Broker)
+  # =========================================================================
+  rabbitmq:
+    image: rabbitmq:latest-management-alpine
+    container_name: shortly-rabbitmq
+    restart: always
+    ports:
+      - "5672:5672"    # AMQP protocol port
+      - "15672:15672"  # Management Web UI (http://localhost:15672)
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:

@@ -1,0 +1,30 @@
+# IDE / IntelliJ
+.idea/
+*.iml
+.vscode/
+
+# OS / macOS Files
+.DS_Store
+Thumbs.db
+
+# Java & Maven Artifacts
+**/target/
+**/*.class
+**/*.jar
+**/*.war
+
+# Logs & Temp Files
+**/*.log
+*.tmp
+
+# Environment Files
+.env
+.env.local
+
+# Node / Web (if any frontend scripts are added)
+**/node_modules/
+
+# Xcode / iOS
+**/*.xcodeproj/project.xcworkspace/
+**/*.xcodeproj/xcuserdata/
+**/DerivedData/
