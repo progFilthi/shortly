@@ -19,36 +19,27 @@ public class AuthService {
     private final UserMapperImpl userMapper;
     private final JwtTokenProvider jwtTokenProvider;
 
-
     public AuthResponse register(RegisterRequest request){
-
         /*
         * We first look if email exists in the db.
         * */
         if( userRepository.existsByEmail(request.email()) ){
             throw new IllegalArgumentException("Email already in use.");
         }
-
         /*
         * Create the new user using the user Object or entity
         * */
         User user = new User();
-
         user.setUsername(request.username());
         user.setEmail(request.email());
-
         //We hash the password using Bcrypt algo.
         user.setPassword(passwordEncoder.encode(request.password()));
-
         User savedUser = userRepository.save(user);
-
         /*
         * Generate the token using:
         * 1. UserId
         * 2. User email
         * */
-
-
         String token = jwtTokenProvider.generateToken(savedUser.getId(), savedUser.getEmail());
 
         /*
