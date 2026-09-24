@@ -2,6 +2,7 @@ package com.shortly.videoservice.impls;
 
 import com.shortly.videoservice.services.S3StorageService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
@@ -13,8 +14,10 @@ import java.time.Duration;
 @RequiredArgsConstructor
 public class S3StorageServiceImpl implements S3StorageService {
 
+    @Value("${aws.s3.bucket-name}")
     private String bucketName;
 
+    @Value("${aws.s3.cdn-domain}")
     private String cdnDomain;
 
     private final S3Presigner s3Presigner;
