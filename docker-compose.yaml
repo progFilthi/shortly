@@ -42,7 +42,7 @@ services:
   # RABBITMQ (Async Messaging & Event Broker)
   # =========================================================================
   rabbitmq:
-    image: rabbitmq:latest
+    image: rabbitmq:management
     container_name: shortly-rabbitmq
     restart: always
     ports:
