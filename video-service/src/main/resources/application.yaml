@@ -24,12 +24,6 @@ spring:
     port: ${RABBITMQ_PORT:5672}
     username: ${RABBITMQ_USER}
     password: ${RABBITMQ_PASSWORD}
-    exchange:
-      name: video.exchange
-    queue:
-      video-uploaded: video.uploaded.queue
-    routing-key:
-      video-uploaded: video.uploaded
 
 aws:
   region: ${AWS_REGION}

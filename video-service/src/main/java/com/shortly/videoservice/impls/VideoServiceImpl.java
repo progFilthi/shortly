@@ -1,5 +1,6 @@
 package com.shortly.videoservice.impls;
 
+import com.shortly.videoservice.config.RabbitMQConfig;
 import com.shortly.videoservice.dto.CreateS3PresignedUrlRequest;
 import com.shortly.videoservice.dto.CreateS3PresignedUrlResponse;
 import com.shortly.videoservice.dto.VideoResponse;
@@ -13,7 +14,6 @@ import com.shortly.videoservice.services.VideoService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,13 +31,6 @@ public class VideoServiceImpl implements VideoService {
     private final VideoMapper videoMapper;
     private final S3StorageService s3StorageService;
     private final RabbitTemplate rabbitTemplate;
-
-
-    @Value("${spring.rabbitmq.exchange.name}")
-    private String exchangeName;
-
-    @Value("${spring.rabbitmq.routing-key.video-uploaded}")
-    private String videoUploadedRoutingKey;
 
     @Override
     @Transactional
@@ -110,7 +103,11 @@ public class VideoServiceImpl implements VideoService {
 
         );
 
-        rabbitTemplate.convertAndSend(exchangeName, videoUploadedRoutingKey, event);
+        rabbitTemplate.convertAndSend(
+                RabbitMQConfig.VIDEO_EXCHANGE_NAME,
+                RabbitMQConfig.VIDEO_UPLOADED_ROUTING_KEY,
+                event
+        );
 
         log.info("Published VideoUploadedEvent to RabbitMQ for videoId: {}", updatedVideo.getId());
 

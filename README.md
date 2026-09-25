@@ -345,11 +345,11 @@ VideoUploadedEvent
 
 Configured names are:
 
-- Exchange: `video.exchange`
-- Routing key: `video.uploaded`
-- Intended queue name: `video.uploaded.queue`
+- Exchange: `video.exchange` (durable direct exchange)
+- Queue: `video.uploaded.queue` (durable queue)
+- Binding routing key: `video.uploaded`
 
-The service configures a JSON message converter and publishes the event, but it does not declare an exchange, queue, or binding. There is no Rabbit listener in any module. The intended transcoder, feed, interaction, and notification consumers therefore are not connected yet, and a fresh broker may require topology to be provisioned externally.
+`RabbitMQConfig` declares the exchange, queue, and binding as explicit beans. `RabbitAdmin` provisions them when the first AMQP connection is established, after which the video service publishes the event. There is no Rabbit listener in any module, so the intended transcoder, feed, interaction, and notification consumers are not connected yet.
 
 ## Known limitations and security notes
 
@@ -360,7 +360,7 @@ These are important before exposing the services outside a trusted development m
 3. **No login flow exists.** Registration returns a token, but passwords are not currently checked by an authentication endpoint.
 4. **Upload completion is client-asserted.** The service does not verify S3 existence, object size, checksum, content type, or media validity.
 5. **Transcoding is not implemented.** `UPLOADING`, `PROCESSING`, and `FAILED` have no transitions; the transcoder module has no listener or FFmpeg execution.
-6. **Messaging is incomplete.** Exchange/queue/binding declarations, consumers, retries, dead-letter handling, idempotency, and an outbox are absent.
+6. **Messaging is incomplete.** The topology is declared, but consumers, retries, dead-letter handling, idempotency, and an outbox are absent.
 7. **The reserved services are not API-ready.** Their gateway routes, ports, and web dependencies are not wired consistently.
 8. **Validation and error contracts are incomplete.** Video request fields are not validated at the controller boundary, and domain errors are not mapped to a stable API error format.
 9. **Schema management is development-oriented.** Hibernate updates schemas in place; Flyway, indexes, cross-service constraints, and production migration strategy are not defined.
@@ -373,7 +373,7 @@ These are important before exposing the services outside a trusted development m
 The next milestones, in recommended order, are:
 
 1. **Harden authentication and service boundaries** — add login and refresh-token flows, stable error responses, downstream gateway-secret validation, and private service networking.
-2. **Complete the media pipeline** — verify uploaded objects, add reliable queue topology, consume upload events, process with FFmpeg, persist processing states, and expose processed outputs.
+2. **Complete the media pipeline** — verify uploaded objects, harden queue delivery, consume upload events, process with FFmpeg, persist processing states, and expose processed outputs.
 3. **Implement interactions** — add idempotent likes, follows, and comments with ownership rules, persistence, and event publishing.
 4. **Build the feed** — add video-service integration, cursor pagination and ranking, personalization, Redis caching, and invalidation.
 5. **Implement notifications** — consume domain events, persist notification state, add WebSocket delivery, and configure APNs/device tokens.
