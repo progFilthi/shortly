@@ -28,3 +28,4 @@ Thumbs.db
 **/*.xcodeproj/project.xcworkspace/
 **/*.xcodeproj/xcuserdata/
 **/DerivedData/
+**/.derivedData/

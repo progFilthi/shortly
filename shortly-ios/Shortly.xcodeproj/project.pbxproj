@@ -1,0 +1,691 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		000000000000000000000040 /* ShortlyApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000100 /* ShortlyApp.swift */; };
+		000000000000000000000041 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000101 /* AppModel.swift */; };
+		000000000000000000000042 /* AppConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000102 /* AppConfiguration.swift */; };
+		000000000000000000000043 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000103 /* MainTabView.swift */; };
+		000000000000000000000044 /* APIModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000104 /* APIModels.swift */; };
+		000000000000000000000045 /* SelectedMovie.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000105 /* SelectedMovie.swift */; };
+		000000000000000000000046 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000106 /* APIClient.swift */; };
+		000000000000000000000047 /* VideoUploader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000107 /* VideoUploader.swift */; };
+		000000000000000000000048 /* SessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000108 /* SessionStore.swift */; };
+		000000000000000000000049 /* RegistrationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000109 /* RegistrationView.swift */; };
+		000000000000000000000050 /* FeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000110 /* FeedView.swift */; };
+		000000000000000000000051 /* LoopingPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000111 /* LoopingPlayerView.swift */; };
+		000000000000000000000052 /* UploadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000112 /* UploadView.swift */; };
+		000000000000000000000053 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000113 /* ProfileView.swift */; };
+		000000000000000000000054 /* APIClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000120 /* APIClientTests.swift */; };
+		000000000000000000000055 /* SessionStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000121 /* SessionStoreTests.swift */; };
+		000000000000000000000056 /* ShortlyUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000130 /* ShortlyUITests.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		000000000000000000000091 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 000000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 000000000000000000000020;
+			remoteInfo = Shortly;
+		};
+		000000000000000000000093 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 000000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 000000000000000000000020;
+			remoteInfo = Shortly;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		000000000000000000000030 /* Shortly.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Shortly.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		000000000000000000000031 /* ShortlyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ShortlyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		000000000000000000000032 /* ShortlyUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ShortlyUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		000000000000000000000100 /* ShortlyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShortlyApp.swift; sourceTree = "<group>"; };
+		000000000000000000000101 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
+		000000000000000000000102 /* AppConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfiguration.swift; sourceTree = "<group>"; };
+		000000000000000000000103 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
+		000000000000000000000104 /* APIModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIModels.swift; sourceTree = "<group>"; };
+		000000000000000000000105 /* SelectedMovie.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectedMovie.swift; sourceTree = "<group>"; };
+		000000000000000000000106 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
+		000000000000000000000107 /* VideoUploader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoUploader.swift; sourceTree = "<group>"; };
+		000000000000000000000108 /* SessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStore.swift; sourceTree = "<group>"; };
+		000000000000000000000109 /* RegistrationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegistrationView.swift; sourceTree = "<group>"; };
+		000000000000000000000110 /* FeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedView.swift; sourceTree = "<group>"; };
+		000000000000000000000111 /* LoopingPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoopingPlayerView.swift; sourceTree = "<group>"; };
+		000000000000000000000112 /* UploadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadView.swift; sourceTree = "<group>"; };
+		000000000000000000000113 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
+		000000000000000000000114 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		000000000000000000000120 /* APIClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClientTests.swift; sourceTree = "<group>"; };
+		000000000000000000000121 /* SessionStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStoreTests.swift; sourceTree = "<group>"; };
+		000000000000000000000130 /* ShortlyUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShortlyUITests.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		000000000000000000000061 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		000000000000000000000064 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		000000000000000000000067 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		000000000000000000000002 = {
+			isa = PBXGroup;
+			children = (
+				000000000000000000000004 /* Shortly */,
+				000000000000000000000010 /* ShortlyTests */,
+				000000000000000000000011 /* ShortlyUITests */,
+				000000000000000000000003 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		000000000000000000000003 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				000000000000000000000030 /* Shortly.app */,
+				000000000000000000000031 /* ShortlyTests.xctest */,
+				000000000000000000000032 /* ShortlyUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		000000000000000000000004 /* Shortly */ = {
+			isa = PBXGroup;
+			children = (
+				000000000000000000000005 /* App */,
+				000000000000000000000006 /* Models */,
+				000000000000000000000007 /* Networking */,
+				000000000000000000000008 /* Persistence */,
+				000000000000000000000009 /* Features */,
+				00000000000000000000000E /* Shared */,
+				00000000000000000000000F /* Resources */,
+			);
+			path = Shortly;
+			sourceTree = "<group>";
+		};
+		000000000000000000000005 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				000000000000000000000100 /* ShortlyApp.swift */,
+				000000000000000000000101 /* AppModel.swift */,
+				000000000000000000000102 /* AppConfiguration.swift */,
+				000000000000000000000103 /* MainTabView.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		000000000000000000000006 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				000000000000000000000104 /* APIModels.swift */,
+				000000000000000000000105 /* SelectedMovie.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		000000000000000000000007 /* Networking */ = {
+			isa = PBXGroup;
+			children = (
+				000000000000000000000106 /* APIClient.swift */,
+				000000000000000000000107 /* VideoUploader.swift */,
+			);
+			path = Networking;
+			sourceTree = "<group>";
+		};
+		000000000000000000000008 /* Persistence */ = {
+			isa = PBXGroup;
+			children = (
+				000000000000000000000108 /* SessionStore.swift */,
+			);
+			path = Persistence;
+			sourceTree = "<group>";
+		};
+		000000000000000000000009 /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				00000000000000000000000A /* Auth */,
+				00000000000000000000000B /* Feed */,
+				00000000000000000000000C /* Upload */,
+				00000000000000000000000D /* Profile */,
+			);
+			path = Features;
+			sourceTree = "<group>";
+		};
+		00000000000000000000000A /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+				000000000000000000000109 /* RegistrationView.swift */,
+			);
+			path = Auth;
+			sourceTree = "<group>";
+		};
+		00000000000000000000000B /* Feed */ = {
+			isa = PBXGroup;
+			children = (
+				000000000000000000000110 /* FeedView.swift */,
+			);
+			path = Feed;
+			sourceTree = "<group>";
+		};
+		00000000000000000000000C /* Upload */ = {
+			isa = PBXGroup;
+			children = (
+				000000000000000000000112 /* UploadView.swift */,
+			);
+			path = Upload;
+			sourceTree = "<group>";
+		};
+		00000000000000000000000D /* Profile */ = {
+			isa = PBXGroup;
+			children = (
+				000000000000000000000113 /* ProfileView.swift */,
+			);
+			path = Profile;
+			sourceTree = "<group>";
+		};
+		00000000000000000000000E /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				000000000000000000000111 /* LoopingPlayerView.swift */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		00000000000000000000000F /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				000000000000000000000114 /* Info.plist */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		000000000000000000000010 /* ShortlyTests */ = {
+			isa = PBXGroup;
+			children = (
+				000000000000000000000120 /* APIClientTests.swift */,
+				000000000000000000000121 /* SessionStoreTests.swift */,
+			);
+			path = ShortlyTests;
+			sourceTree = "<group>";
+		};
+		000000000000000000000011 /* ShortlyUITests */ = {
+			isa = PBXGroup;
+			children = (
+				000000000000000000000130 /* ShortlyUITests.swift */,
+			);
+			path = ShortlyUITests;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		000000000000000000000020 /* Shortly */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 000000000000000000000071 /* Build configuration list for PBXNativeTarget "Shortly" */;
+			buildPhases = (
+				000000000000000000000060 /* Sources */,
+				000000000000000000000061 /* Frameworks */,
+				000000000000000000000062 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Shortly;
+			productName = Shortly;
+			productReference = 000000000000000000000030 /* Shortly.app */;
+			productType = "com.apple.product-type.application";
+		};
+		000000000000000000000021 /* ShortlyTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 000000000000000000000072 /* Build configuration list for PBXNativeTarget "ShortlyTests" */;
+			buildPhases = (
+				000000000000000000000063 /* Sources */,
+				000000000000000000000064 /* Frameworks */,
+				000000000000000000000065 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				000000000000000000000090 /* PBXTargetDependency */,
+			);
+			name = ShortlyTests;
+			productName = ShortlyTests;
+			productReference = 000000000000000000000031 /* ShortlyTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		000000000000000000000022 /* ShortlyUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 000000000000000000000073 /* Build configuration list for PBXNativeTarget "ShortlyUITests" */;
+			buildPhases = (
+				000000000000000000000066 /* Sources */,
+				000000000000000000000067 /* Frameworks */,
+				000000000000000000000068 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				000000000000000000000092 /* PBXTargetDependency */,
+			);
+			name = ShortlyUITests;
+			productName = ShortlyUITests;
+			productReference = 000000000000000000000032 /* ShortlyUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		000000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2700;
+				LastUpgradeCheck = 2700;
+				TargetAttributes = {
+					000000000000000000000020 = {
+						CreatedOnToolsVersion = 27.0;
+					};
+					000000000000000000000021 = {
+						CreatedOnToolsVersion = 27.0;
+						TestTargetID = 000000000000000000000020;
+					};
+					000000000000000000000022 = {
+						CreatedOnToolsVersion = 27.0;
+						TestTargetID = 000000000000000000000020;
+					};
+				};
+			};
+			buildConfigurationList = 000000000000000000000070 /* Build configuration list for PBXProject "Shortly" */;
+			compatibilityVersion = "Xcode 15.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 000000000000000000000002;
+			productRefGroup = 000000000000000000000003 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				000000000000000000000020 /* Shortly */,
+				000000000000000000000021 /* ShortlyTests */,
+				000000000000000000000022 /* ShortlyUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		000000000000000000000062 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		000000000000000000000065 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		000000000000000000000068 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		000000000000000000000060 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				000000000000000000000040 /* ShortlyApp.swift in Sources */,
+				000000000000000000000041 /* AppModel.swift in Sources */,
+				000000000000000000000042 /* AppConfiguration.swift in Sources */,
+				000000000000000000000043 /* MainTabView.swift in Sources */,
+				000000000000000000000044 /* APIModels.swift in Sources */,
+				000000000000000000000045 /* SelectedMovie.swift in Sources */,
+				000000000000000000000046 /* APIClient.swift in Sources */,
+				000000000000000000000047 /* VideoUploader.swift in Sources */,
+				000000000000000000000048 /* SessionStore.swift in Sources */,
+				000000000000000000000049 /* RegistrationView.swift in Sources */,
+				000000000000000000000050 /* FeedView.swift in Sources */,
+				000000000000000000000051 /* LoopingPlayerView.swift in Sources */,
+				000000000000000000000052 /* UploadView.swift in Sources */,
+				000000000000000000000053 /* ProfileView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		000000000000000000000063 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				000000000000000000000054 /* APIClientTests.swift in Sources */,
+				000000000000000000000055 /* SessionStoreTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		000000000000000000000066 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				000000000000000000000056 /* ShortlyUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		000000000000000000000090 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 000000000000000000000020 /* Shortly */;
+			targetProxy = 000000000000000000000091 /* PBXContainerItemProxy */;
+		};
+		000000000000000000000092 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 000000000000000000000020 /* Shortly */;
+			targetProxy = 000000000000000000000093 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		000000000000000000000080 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_STRICT_CONCURRENCY = minimal;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		000000000000000000000081 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_STRICT_CONCURRENCY = minimal;
+				SWIFT_VERSION = 5.0;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		000000000000000000000082 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				API_BASE_URL = "http://localhost:8080";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Shortly/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.shortly.ios;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		000000000000000000000083 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				API_BASE_URL = "http://localhost:8080";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Shortly/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.shortly.ios;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		000000000000000000000084 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.shortly.ios.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Shortly.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Shortly";
+			};
+			name = Debug;
+		};
+		000000000000000000000085 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.shortly.ios.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Shortly.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Shortly";
+			};
+			name = Release;
+		};
+		000000000000000000000086 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.shortly.ios.uitests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Shortly;
+			};
+			name = Debug;
+		};
+		000000000000000000000087 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.shortly.ios.uitests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Shortly;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		000000000000000000000070 /* Build configuration list for PBXProject "Shortly" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				000000000000000000000080 /* Debug */,
+				000000000000000000000081 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		000000000000000000000071 /* Build configuration list for PBXNativeTarget "Shortly" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				000000000000000000000082 /* Debug */,
+				000000000000000000000083 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		000000000000000000000072 /* Build configuration list for PBXNativeTarget "ShortlyTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				000000000000000000000084 /* Debug */,
+				000000000000000000000085 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		000000000000000000000073 /* Build configuration list for PBXNativeTarget "ShortlyUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				000000000000000000000086 /* Debug */,
+				000000000000000000000087 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 000000000000000000000001 /* Project object */;
+}
