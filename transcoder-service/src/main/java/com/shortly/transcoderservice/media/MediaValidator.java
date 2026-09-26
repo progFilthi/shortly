@@ -9,10 +9,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
-/**
- * The admission gate. Runs after probing and before a single byte of encoding happens, so
- * an oversized or over-long upload costs one ffprobe invocation instead of a full ladder.
- */
+/** The admission gate. */
 @Component
 public class MediaValidator {
 
@@ -24,9 +21,7 @@ public class MediaValidator {
         this.properties = properties;
     }
 
-    /**
-     * @throws MediaValidationException if the input can never become a playable shortform video
-     */
+    /** @throws MediaValidationException if the input can never become a playable shortform video */
     public void validate(MediaMetadata metadata, long fileSizeBytes) {
         if (!metadata.durationReliable()) {
             throw new MediaValidationException(TranscodeFailureReason.SOURCE_CORRUPT,
@@ -58,16 +53,8 @@ public class MediaValidator {
         }
     }
 
-    /**
-     * Drops rungs that would require upscaling.
-     * <p>
-     * Encoding a 1080p rung from a 720p source produces a larger, blurrier file that costs
-     * bandwidth on every single view while looking worse than the 720p rung. Skipping it is
-     * strictly better for the viewer and strictly cheaper for us.
-     * <p>
-     * The smallest rung is always kept: a 320p source still needs a rung it can fill, and a
-     * ladder with no rung at or below the source size is unplayable.
-     */
+    /** Drops rungs that would require upscaling. The smallest rung is always kept: a 320p source still
+     * needs a rung it can fill, and a ladder with no rung at or below the source size is unplayable. */
     public List<Rendition> applicableRungs(MediaMetadata metadata) {
         List<Rendition> configured = properties.ladder();
         List<Rendition> result = configured.stream()
@@ -83,8 +70,8 @@ public class MediaValidator {
     }
 
     private void logUpscaleFallback(Rendition smallest, MediaMetadata metadata) {
-        // Deliberately visible: producing an upscaled rung is a real cost and a real quality
-        // compromise, and it should be something an operator can find in the logs.
+        // Deliberately visible: producing an upscaled rung is a real cost and a real quality compromise,
+        // and it should be something an operator can find in the logs.
         log.warn("Source {}x{} is smaller than the smallest configured rung {}x{}; that rung will be upscaled",
                 metadata.displayWidth(), metadata.displayHeight(),
                 smallest.width(), smallest.height());

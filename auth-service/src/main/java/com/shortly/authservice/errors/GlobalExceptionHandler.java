@@ -30,18 +30,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * Turns every escaping exception into one consistent RFC 9457 problem document.
- *
- * <p>Without this, a validation failure and a genuine bug both surface as an HTML error page or a
- * bare 500, so a client cannot tell "fix your request" from "retry later" without string
- * matching. Every response carries a {@code code} from {@link ApiError}, which is shared across
- * services, so a client branches on the code rather than on the message.
- *
- * <p>Unhandled exceptions get a {@code traceId} that also appears in the log, so a user can quote
- * it and an operator can find the stack trace. The exception message itself is never returned:
- * it routinely contains SQL, file paths, or attacker-supplied input.
- */
+/** Turns every escaping exception into one consistent RFC 9457 problem document. Without this, a
+ * client cannot tell "fix your request" from "retry later" without string matching. */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -51,17 +41,14 @@ public class GlobalExceptionHandler {
 
     /* --------------------------- domain exceptions ---------------------------- */
 
-    /**
-     * Every auth-service failure is an {@link AuthException} carrying its own code, so one
-     * handler covers all of them and adding a new failure type needs no change here.
-     */
+    /** Every auth-service failure is an {@link AuthException} carrying its own code, so one handler
+     * covers all of them and adding a new failure type needs no change here. */
     @ExceptionHandler(AuthException.class)
     public ResponseEntity<ProblemDetail> handleAuthException(AuthException e,
                                                             HttpServletRequest request) {
         ProblemDetail detail = problem(e.error(), e.getMessage(), request);
-        // Each exception contributes its own structured detail, e.g. the lockout countdown or the
-        // minimum password length. No instanceof chain here, so adding a failure type needs no
-        // change to this handler.
+        // Each exception contributes its own structured detail, e.g. the lockout countdown or the minimum
+        // password length.
         e.problemDetails().forEach(detail::setProperty);
 
         log.warn("{} on {}: {} ({})",
@@ -186,12 +173,8 @@ public class GlobalExceptionHandler {
 
     /* ----------------------------- conflict problems ----------------------------- */
 
-    /**
-     * A unique-constraint violation that no earlier check caught.
-     * <p>
-     * Reached only on a genuine race, since registration also pre-checks. The constraint name is
-     * not echoed back, because it names a column and would tell an attacker which field collided.
-     */
+    /** A unique-constraint violation that no earlier check caught. Reached only on a genuine race,
+     * since registration also pre-checks. */
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ProblemDetail> handleIntegrityViolation(DataIntegrityViolationException e,
                                                                   HttpServletRequest request) {
@@ -203,13 +186,7 @@ public class GlobalExceptionHandler {
 
     /* --------------------------------- fallback ---------------------------------- */
 
-    /**
-     * Anything unhandled.
-     * <p>
-     * A fresh trace id per failure, returned to the client and written to the log. A 500 with a
-     * generic message and a correlatable id is the difference between a five-minute triage and an
-     * afternoon of "the user says it sometimes errors".
-     */
+    /** Anything unhandled. */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ProblemDetail> handleUnexpected(Exception e, HttpServletRequest request) {
         String traceId = UUID.randomUUID().toString();

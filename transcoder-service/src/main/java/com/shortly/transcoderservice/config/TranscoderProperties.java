@@ -7,10 +7,7 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 import java.time.Duration;
 import java.util.List;
 
-/**
- * Externalised configuration. Every value is environment-overridable, so one artifact runs in
- * dev, CI and production without a rebuild.
- */
+/** Externalised configuration. */
 @ConfigurationProperties(prefix = "transcoder")
 public record TranscoderProperties(
 
@@ -53,40 +50,21 @@ public record TranscoderProperties(
 
         /* ------------------------------- reporting ------------------------------- */
 
-        /**
-         * When true, raw ffmpeg stderr is embedded in the failure message. Off by default
-         * because stderr is attacker-influenced and ends up in a database column a human
-         * may later read; it belongs in logs, not in the event.
-         */
+        /** When true, raw ffmpeg stderr is embedded in the failure message. */
         @DefaultValue("false") boolean includeFfmpegStderrInFailure,
 
-        /**
-         * Whether to verify the ffmpeg build's capabilities at startup and refuse to start if
-         * any are missing.
-         * <p>
-         * Leave on everywhere that runs jobs: it converts "the first HDR upload fails" into "the
-         * deploy fails". Only turned off by tests that assert the bean graph and have no business
-         * requiring a media toolchain on the host.
-         */
+        /** Whether to verify the ffmpeg build's capabilities at startup and refuse to start if any are
+         * deploy fails". */
         @DefaultValue("true") boolean verifyMediaToolchain
 ) {
 
-    /**
-     * The configured ladder, or the built-in default when none is supplied.
-     *
-     * <p>An explicit accessor rather than a {@code @DefaultValue}, so a partially configured
-     * environment still gets a working ladder instead of a null.
-     */
+    /** The configured ladder, or the built-in default when none is supplied. An explicit accessor
+     * ladder instead of a null. */
     public List<Rendition> ladder() {
         return (ladder == null || ladder.isEmpty()) ? defaultLadder() : List.copyOf(ladder);
     }
 
-    /**
-     * One rung. Width and height must be even for H.264 4:2:0 chroma; maxrate sits ~5% above
-     * target to absorb overshoot without runaway, and bufsize is 2x maxrate.
-     *
-     * @param name directory name in object storage and the rung's public identifier
-     */
+    /** One rung. */
     public record Rendition(
             String name,
             int width,
@@ -115,16 +93,8 @@ public record TranscoderProperties(
         }
     }
 
-    /**
-     * The default 9:16 ladder, highest first.
-     *
-     * <p>Every rung is exact 9:16 with even dimensions, so the transform never rounds and
-     * chroma never smears on the last row. The floor is 180x320: "144p" in landscape terms
-     * would be 81x144 vertical, too small to be worth serving.
-     *
-     * <p>Aggregate output is ~9 Mbps, half of it the 1080p rung. If storage bites, drop v0 or
-     * start at v1 - that alone halves bytes per video.
-     */
+    /** The default 9:16 ladder, highest first. Every rung is exact 9:16 with even dimensions, so the
+     * transform never rounds and chroma never smears on the last row. */
     public static List<Rendition> defaultLadder() {
         return List.of(
                 Rendition.of("v0", 1080, 1920, 4500),

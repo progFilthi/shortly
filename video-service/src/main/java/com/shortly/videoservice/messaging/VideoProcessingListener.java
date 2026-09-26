@@ -13,18 +13,8 @@ import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Applies transcoder outcomes to the video aggregate.
- * <p>
- * video-service owns the {@code videos} table; the transcoder never writes to it. It publishes
- * {@code video.ready} or {@code video.failed} and this listener applies the transition. That
- * keeps the two services independently deployable and means a transcoder outage or a rogue
- * write can never corrupt video metadata.
- * <p>
- * Both handlers are idempotent. Events can be redelivered, and re-applying a transition that
- * has already happened must be a no-op rather than an error - otherwise a duplicate publish
- * dead-letters a video that is already perfectly fine.
- */
+/** Applies transcoder outcomes to the video aggregate. video-service owns the {@code videos} table;
+ * the transcoder never writes to it. */
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -39,8 +29,8 @@ public class VideoProcessingListener {
     public void onVideoReady(VideoReadyEvent event) {
         Video video = videoRepository.findById(event.videoId()).orElse(null);
         if (video == null) {
-            // Nothing to attach the ladder to. Not retryable: a missing row will still be
-            // missing next time, and looping on it would mask a much larger bug.
+            // Nothing to attach the ladder to. Not retryable: a missing row will still be missing next time,
+            // and looping on it would mask a much larger bug.
             log.error("Received video.ready for {} but no such video exists; dropping", event.videoId());
             return;
         }
@@ -51,8 +41,8 @@ public class VideoProcessingListener {
         }
 
         if (video.getVideoStatus() == VideoStatus.FAILED) {
-            // A late success after a recorded failure. Trust the failure: it was published for
-            // a reason, and silently flipping a FAILED video to READY would hide it.
+            // A late success after a recorded failure. Trust the failure: it was published for a reason, and
+            // silently flipping a FAILED video to READY would hide it.
             log.warn("Received video.ready for {} which is already FAILED ({}); ignoring",
                     event.videoId(), video.getFailureReason());
             return;
@@ -73,8 +63,8 @@ public class VideoProcessingListener {
         try {
             videoRepository.save(video);
         } catch (OptimisticLockingFailureException e) {
-            // Another writer (a cover-frame selection, say) touched the row concurrently.
-            // The event will be redelivered, and re-applying it is safe.
+            // Another writer (a cover-frame selection, say) touched the row concurrently. The event will be
+            // redelivered, and re-applying it is safe.
             log.warn("Concurrent write while marking video {} READY; will retry", event.videoId());
             throw e;
         }

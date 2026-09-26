@@ -3,53 +3,42 @@ spring:
     name: transcoder-service
 
   rabbitmq:
-    # localhost, not `rabbitmq`: that name only resolves inside the Compose network.
-    host: ${RABBITMQ_HOST:localhost}
+    host: ${RABBITMQ_HOST}
     port: ${RABBITMQ_PORT:5672}
-    username: ${RABBITMQ_USER:guest}
-    password: ${RABBITMQ_PASSWORD:guest}
-    # Publisher confirms: without these, convertAndSend returns successfully even when the
-    # broker never durably accepted the message, and a video silently stays in PROCESSING
-    # forever. Combined with mandatory=true in TranscoderMessagingConfig.
+    username: ${RABBITMQ_USER}
+    password: ${RABBITMQ_PASSWORD}
+    # Publisher confirms: without these, convertAndSend returns successfully even when the broker
+    # never durably accepted the message
     publisher-confirm-type: correlated
     publisher-returns: true
     listener:
       simple:
-        # Must be AUTO (the default) with a dead-letter chain. MANUAL would need explicit
-        # ack management across a multi-minute job, and requeue=true on failure loops forever.
+        # Must be AUTO (the default) with a dead-letter chain. MANUAL would need explicit ack management
+        # across a multi-minute job, and requeue=true on failure loops forever.
         acknowledge-mode: auto
         missing-queues-fatal: true
 
   lifecycle:
-    # Gives an in-flight ffmpeg job time to be killed cleanly by FfmpegExecutor#shutdown
-    # before the JVM exits, instead of the pod being SIGKILLed mid-encode.
+    # Gives an in-flight ffmpeg job time to be killed cleanly by FfmpegExecutor#shutdown before the
+    # JVM exits, instead of the pod being SIGKILLed mid-encode.
     timeout-per-shutdown-phase: 45s
 
 aws:
-  region: ${AWS_REGION:us-east-1}
+  region: ${AWS_REGION}
   credentials:
-    access-key: ${AWS_ACCESS_KEY_ID:test}
-    secret-key: ${AWS_SECRET_ACCESS_KEY:test}
-  # Empty this against real AWS, where the endpoint comes from aws.region instead.
-  endpoint-url: ${AWS_ENDPOINT_URL:http://localhost:4566}
+    access-key: ${AWS_ACCESS_KEY_ID}
+    secret-key: ${AWS_SECRET_ACCESS_KEY}
 
 transcoder:
 
-  # ------------------------------- input limits -------------------------------
-  # 500 MB is a deliberately generous ceiling for the fallback path (uploads that were not
-  # normalised on device). It is enforced here, again in the video-service upload gate, and
-  # client-side before the presign is minted.
+  # ------------------------------- input limits ------------------------------- 500 MB
   max-duration: 60s
   max-upload-bytes: 500MB
   max-source-width: 3840
   max-source-height: 2160
 
-  # --------------------------------- ladder ----------------------------------
-  # Left unset: the built-in 9:16 ladder in TranscoderProperties#defaultLadder applies.
-  # To override, supply the full list, e.g.
-  #   ladder:
-  #     - { name: v0, width: 1080, height: 1920, videoKbps: 4500, maxrateKbps: 4710, bufsizeKbps: 9000 }
-  #     - { name: v1, width:  720, height: 1280, videoKbps: 2200, maxrateKbps: 2310, bufsizeKbps: 4400 }
+  # --------------------------------- ladder ---------------------------------- Left unset: the
+  # built-in 9:16 ladder in TranscoderProperties#defaultLadder applies.
   output-fps: 30
   segment-seconds: 2
   audio-bitrate: 128k
@@ -61,19 +50,17 @@ transcoder:
   # -------------------------------- execution --------------------------------
   ffmpeg-path: ffmpeg
   ffprobe-path: ffprobe
-  # A 60s 6-rung ladder takes ~16s wall on 10 vCPU and ~60s on 4 vCPU. This budget is
-  # roughly 6x the expected worst case, so it only fires on a genuinely stuck process.
+  # A 60s 6-rung ladder takes ~16s wall on 10 vCPU and ~60s on 4 vCPU. This budget is roughly 6x the
+  # expected worst case, so it only fires on a genuinely stuck process.
   job-timeout: 10m
-  # Not /work: that was a container tmpfs mount and does not exist on a host.
-  work-dir: ${TRANSCODER_WORK_DIR:${java.io.tmpdir}/shortly-transcoder}
+  work-dir: ${TRANSCODER_WORK_DIR:/work}
 
   # --------------------------------- upload ----------------------------------
   upload-concurrency: 24
   upload-timeout: 4m
 
-  # ------------------------------- thumbnails --------------------------------
-  # 10x10 = up to 100 candidate cover frames, enough for a client to scrub freely across a
-  # 60s clip. 240px wide tiles keep the sheet under ~1 MB.
+  # ------------------------------- thumbnails -------------------------------- 10x10 = up to 100
+  # candidate cover frames
   sprite-columns: 10
   sprite-rows: 10
   sprite-tile-width: 240
@@ -81,12 +68,12 @@ transcoder:
 
   # --------------------------------- consumer --------------------------------
   consumer:
-    # Set both to floor(vCPU / 2). Each ffmpeg process otherwise saturates every core, so
-    # more listeners than cores makes every job slower rather than the queue shorter.
+    # Set both to floor(vCPU / 2). Each ffmpeg process otherwise saturates every core, so more
+    # listeners than cores makes every job slower rather than the queue shorter.
     concurrency: ${TRANSCODER_CONCURRENCY:2}
     max-concurrency: ${TRANSCODER_CONCURRENCY:2}
-    # MUST stay at 1. At the default of 250 a worker hoards hundreds of unacked jobs and a
-    # crash loses all of them.
+    # MUST stay at 1. At the default of 250 a worker hoards hundreds of unacked jobs and a crash loses
+    # all of them.
     prefetch: 1
     retry-attempts: 3
     retry-initial-interval: PT15S
@@ -94,19 +81,17 @@ transcoder:
     retry-max-interval: PT2M
 
   storage:
-    bucket-name: ${AWS_S3_BUCKET:shortly-videos-bucket}
-    cdn-domain: ${CDN_DOMAIN:http://localhost:4566/shortly-videos-bucket}
+    bucket-name: ${AWS_S3_BUCKET}
+    cdn-domain: ${CDN_DOMAIN}
     output-prefix: hls
     max-connections: 32
-    # Segments are immutable and content-addressed, so cache them essentially forever.
-    # Manifests get the same treatment: a video's ladder is never regenerated under the same
-    # videoId, so there is no staleness to guard against.
+    # Segments are immutable and content-addressed, so cache them essentially forever. Manifests get
+    # the same treatment:
     output-cache-control: public, max-age=31536000, immutable
     playlist-cache-control: public, max-age=31536000, immutable
 
 server:
-  # 8085, not 8080: the gateway owns 8080 and host ports must be unique.
-  port: 8085
+  port: 8080
   shutdown: graceful
 
 management:
@@ -118,9 +103,8 @@ management:
     health:
       probes:
         enabled: true
-      # Rabbit is the only reason this process cannot make progress, so readiness must fail
-      # without a broker connection. Health-check for a DB-less service should not be a
-      # rubber stamp.
+      # Rabbit is the only reason this process cannot make progress, so readiness must fail without a
+      # broker connection.
       show-details: never
   health:
     rabbit:
@@ -129,6 +113,6 @@ management:
 logging:
   level:
     com.shortly.transcoderservice: ${TRANSCODER_LOG_LEVEL:INFO}
-    # bramp logs ffmpeg's full stderr at debug, which for a 6-rung ladder is enormous and is
-    # already captured deliberately by FfmpegExecutor.
+    # bramp logs ffmpeg's full stderr at debug, which for a 6-rung ladder is enormous and is already
+    # captured deliberately by FfmpegExecutor.
     net.bramp.ffmpeg: WARN

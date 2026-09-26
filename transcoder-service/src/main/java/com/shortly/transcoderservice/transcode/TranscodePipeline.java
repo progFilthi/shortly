@@ -27,22 +27,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * The end-to-end job for one video.
- * <p>
- * Order is load-bearing and each step is cheap relative to the next, so the expensive work
- * is always last:
- * <ol>
- *   <li>download the source (~seconds)</li>
- *   <li>probe it (~100ms) - from here on every rejection is free</li>
- *   <li>validate against platform limits (~0ms)</li>
- *   <li>encode the ladder (~minutes)</li>
- *   <li>extract thumbnails (~seconds)</li>
- *   <li>upload, master manifest last</li>
- * </ol>
- * Every failure mode maps to a {@link TranscodeFailureReason} so the client can be told
- * which limit was hit rather than just "something went wrong".
- */
+/** The end-to-end job for one video. Every failure mode maps to a {@link TranscodeFailureReason} so
+ * the client can be told which limit was hit rather than just "something went wrong". */
 @Component
 public class TranscodePipeline {
 
@@ -89,11 +75,7 @@ public class TranscodePipeline {
             log.info("[{}] downloaded source ({} bytes) in {}ms", videoId, actualSizeBytes,
                     elapsedMs(startedAt));
 
-            /*
-             * Trust the bytes, not the event. The event's size is a hint produced before the
-             * upload was necessarily complete; the local file is what ffprobe is about to
-             * read, so validating that is what actually bounds the work.
-             */
+            /** Trust the bytes, not the event. */
             if (actualSizeBytes == 0) {
                 throw new MediaValidationException(TranscodeFailureReason.SOURCE_CORRUPT,
                         "Source object is empty");
@@ -128,8 +110,8 @@ public class TranscodePipeline {
 
             FfmpegExecutor.Result result = executor.run(command, properties.jobTimeout());
             if (!result.succeeded()) {
-                // ffmpeg's own diagnostics go to the log in full. The exception carries only
-                // the first line, because it ends up in a DB column a human may read.
+                // ffmpeg's own diagnostics go to the log in full. The exception carries only the first line,
+                // because it ends up in a DB column a human may read.
                 log.error("[{}] ffmpeg failed for {}: {}",
                         videoId, describeTarget(command), result.stderr());
                 throw new TranscodeFailedException(
@@ -146,14 +128,13 @@ public class TranscodePipeline {
             List<String> renditionNames = rungs.stream().map(Rendition::name).toList();
             List<String> uploadedKeys = new ArrayList<>();
             try {
-                // Segments and media playlists first; the master manifest only once every
-                // segment it references is durable.
+                // Segments and media playlists first; the master manifest only once every segment it references is
+                // durable.
                 uploadedKeys.addAll(uploader.upload(videoId, workspace.hlsDir(), renditionNames));
                 uploadThumbnails(videoId, workspace, spriteIntervals);
             } catch (RuntimeException e) {
-                // Best effort. A partially written ladder is unreachable anyway because the
-                // master manifest is uploaded last, so this only saves storage, and a
-                // lifecycle rule on the output prefix is the real safety net.
+                // Best effort. A partially written ladder is unreachable anyway because the master manifest is
+                // uploaded last, so this only saves storage
                 objectStore.deleteQuietly(cleanupKeys(videoId, renditionNames));
                 throw e;
             }
@@ -175,9 +156,8 @@ public class TranscodePipeline {
                             rungs.stream().map(this::toRenditionInfo).toList(),
                             Instant.now());
 
-            // Written last, after the master exists. A ladder without a sidecar is still
-            // playable, so this must not be able to fail the job; the listener degrades
-            // gracefully if it is missing.
+            // Written last, after the master exists. A ladder without a sidecar is still playable, so this
+            // must not be able to fail the job;
             objectStore.putJson(storage.readyEventKey(videoId), ready);
 
             log.info("[{}] complete in {}ms ({} rungs, {} objects, {} bytes on disk)",

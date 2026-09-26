@@ -1,12 +1,6 @@
 package com.shortly.contracts.media;
 
-/**
- * Machine-readable reason a video failed to reach {@code READY}.
- * <p>
- * Clients should switch on this rather than parse human-readable messages.
- * {@link #isRetryable()} tells the platform whether re-queueing the job could plausibly
- * succeed, as opposed to a permanently bad input.
- */
+/** Machine-readable reason a video failed to reach {@code READY}. */
 public enum TranscodeFailureReason {
 
     /** The source object referenced by the event does not exist in the bucket. */

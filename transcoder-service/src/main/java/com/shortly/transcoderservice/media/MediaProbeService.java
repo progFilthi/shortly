@@ -19,11 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-/**
- * Reads media metadata with ffprobe, the only authority in this pipeline. The declared
- * contentType is client-supplied and the key suffix is derived from it, so neither can be
- * trusted to describe the actual container.
- */
+/** Reads media metadata with ffprobe, the only authority in this pipeline. */
 @Component
 public class MediaProbeService {
 
@@ -37,21 +33,16 @@ public class MediaProbeService {
         try {
             this.ffprobe = new FFprobe(properties.ffprobePath());
         } catch (IOException e) {
-            // FfmpegCapabilities also verifies this on ApplicationReadyEvent, but failing here
-            // means a misconfigured path is a startup error rather than a per-job error.
+            // FfmpegCapabilities also verifies this on ApplicationReadyEvent, but failing here means a
+            // misconfigured path is a startup error rather than a per-job error.
             throw new IllegalStateException(
                     "Could not initialise ffprobe at '" + properties.ffprobePath()
                             + "'. Is ffprobe installed and on PATH?", e);
         }
     }
 
-    /**
-     * Probes a local file.
-     * <p>
-     * Failures surface as {@link UnprobeableMediaException} rather than a raw bramp
-     * exception: "we could not read this file" is a decision the pipeline has to make, and
-     * it maps to a specific terminal failure reason.
-     */
+    /** Probes a local file. Failures surface as {@link UnprobeableMediaException} rather than a raw
+     * maps to a specific terminal failure reason. */
     public MediaMetadata probe(Path file) {
         FFmpegProbeResult result;
         try {
@@ -80,11 +71,7 @@ public class MediaProbeService {
             throw new UnprobeableMediaException("File contains no video stream");
         }
 
-        /*
-         * Largest by pixel count. A file may carry a cover-art or thumbnail video stream
-         * alongside the real one - some camera and social-export formats do exactly this -
-         * and transcoding the wrong one wastes the entire job.
-         */
+        /** Largest by pixel count. */
         FFmpegStream video = videoStreams.stream()
                 .max(Comparator.comparingLong(s -> (long) s.width * s.height))
                 .orElseThrow(() -> new UnprobeableMediaException("No usable video stream"));
@@ -118,16 +105,8 @@ public class MediaProbeService {
         );
     }
 
-    /**
-     * Rotation, from the stream's display-matrix side data - not any top-level ffprobe field.
-     *
-     * <p>ffmpeg applies the matrix during decode, so the encoder sees the rotated picture while
-     * width/height validation sees the unrotated values: an iPhone portrait clip reports
-     * 1920x1080 to ffprobe and 1080x1920 to the user.
-     *
-     * <p>Static so it can be tested directly - it cannot be tested by probing a real file,
-     * because ffmpeg 8 cannot write a display matrix. See MediaProbeRotationTest.
-     */
+    /** Rotation, from the stream's display-matrix side data - not any top-level ffprobe field. Static
+     * cannot write a display matrix. */
     static int readRotation(FFmpegStream stream) {
         FFmpegStream.SideData[] sideData = stream.side_data_list;
         if (sideData == null) {
@@ -144,15 +123,7 @@ public class MediaProbeService {
         return 0;
     }
 
-    /**
-     * Matches ffprobe's {@code side_data_type} for a rotation matrix.
-     * <p>
-     * The literal value is {@code "Display Matrix"} — with a space. Comparing against a
-     * lowercased {@code "displaymatrix"} silently never matches, which disables rotation
-     * detection entirely and produces sideways output with no error anywhere. Non-alphanumeric
-     * characters are stripped before comparing so the check is insensitive to how the value is
-     * punctuated.
-     */
+    /** Matches ffprobe's {@code side_data_type} for a rotation matrix. */
     private static boolean isDisplayMatrix(String sideDataType) {
         return sideDataType.toLowerCase().replaceAll("[^a-z0-9]", "").contains("displaymatrix");
     }
@@ -163,11 +134,8 @@ public class MediaProbeService {
         return degrees == 0 ? 0 : 360 - degrees;
     }
 
-    /**
-     * Container duration, falling back to the longest stream's for containers that only carry
-     * per-stream timing. Zero is returned honestly rather than invented; the validator treats an
-     * unreportable duration as a corrupt source.
-     */
+    /** Container duration, falling back to the longest stream's for containers that only carry per-
+     * stream timing. */
     private Duration toDuration(FFmpegFormat format, FFmpegStream video, FFmpegStream audio) {
         if (format != null && format.duration > 0) {
             return Duration.ofMillis(Math.round(format.duration * 1000));
@@ -185,8 +153,8 @@ public class MediaProbeService {
         try {
             return fraction.doubleValue();
         } catch (ArithmeticException e) {
-            // A 0/0 timebase is not fatal; it just means the frame rate is unknown, and the
-            // command builder falls back to the configured output rate.
+            // A 0/0 timebase is not fatal; it just means the frame rate is unknown, and the command builder
+            // falls back to the configured output rate.
             log.debug("Unparseable frame rate fraction, treating as unknown", e);
             return 0d;
         }

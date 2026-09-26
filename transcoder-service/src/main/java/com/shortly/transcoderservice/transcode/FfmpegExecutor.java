@@ -20,14 +20,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-/**
- * Runs ffmpeg as a supervised child process.
- *
- * <p>Shelling out has three failure modes a pure-Java pipeline does not, and all three are
- * handled here: a runaway job (hard wall-clock budget plus SIGKILL), a child orphaned across a
- * container shutdown (every process is tracked and killed on the way out), and a deadlocked
- * stderr pipe (drained on a dedicated thread for the process's whole life, not just until exit).
- */
+/** Runs ffmpeg as a supervised child process. Shelling out has three failure modes a pure-Java
+ * whole life, not just until exit). */
 @Component
 public class FfmpegExecutor {
 
@@ -46,14 +40,8 @@ public class FfmpegExecutor {
         this.properties = properties;
     }
 
-    /**
-     * Executes a command and blocks until it finishes, fails, or exceeds its budget.
-     *
-     * @return the exit code and captured stderr; a non-zero exit is NOT an exception here,
-     *         because the caller usually wants to classify it and attach context first
-     * @throws FfmpegTimeoutException  if the wall-clock budget elapsed
-     * @throws FfmpegExecutionException if the process could not be started at all
-     */
+    /** Executes a command and blocks until it finishes, fails, or exceeds its budget. @return the exit
+     * budget elapsed @throws FfmpegExecutionException if the process could not be started at all */
     public Result run(List<String> command, Duration timeout) {
         Process process;
         try {
@@ -66,8 +54,8 @@ public class FfmpegExecutor {
         running.add(process);
         ScheduledFuture<?> killSwitch = scheduleKill(process, timeout, command);
 
-        // Drained for the process's whole life; this capture is the only record of why a job
-        // actually failed.
+        // Drained for the process's whole life; this capture is the only record of why a job actually
+        // failed.
         StringBuilder stderr = new StringBuilder();
         Thread drainer = new Thread(() -> {
             try (BufferedReader reader = new BufferedReader(
@@ -75,8 +63,8 @@ public class FfmpegExecutor {
                 String line;
                 while ((line = reader.readLine()) != null) {
                     synchronized (stderr) {
-                        // Bound the buffer: a pathological input can emit megabytes of
-                        // warnings, and we must not hold that in memory or put it in a log.
+                        // Bound the buffer: a pathological input can emit megabytes of warnings, and we must not hold that
+                        // in memory or put it in a log.
                         if (stderr.length() < MAX_STDERR_CHARS) {
                             stderr.append(line).append('\n');
                         }
@@ -110,12 +98,7 @@ public class FfmpegExecutor {
         }
     }
 
-    /**
-     * Outcome of one ffmpeg invocation.
-     *
-     * @param exitCode ffmpeg's exit status
-     * @param stderr   the tail of ffmpeg's diagnostics, always populated on failure
-     */
+    /** Outcome of one ffmpeg invocation. */
     public record Result(int exitCode, String stderr) {
 
         public boolean succeeded() {
@@ -135,11 +118,7 @@ public class FfmpegExecutor {
         }, timeout.toMillis(), TimeUnit.MILLISECONDS);
     }
 
-    /**
-     * Frees the container's writable layer on shutdown. Called by the shutdown hook so a
-     * rolling deploy does not leave a multi-gigabyte encoder still running while the new
-     * container starts.
-     */
+    /** Frees the container's writable layer on shutdown. */
     @PreDestroy
     public void shutdown() {
         if (running.isEmpty()) {

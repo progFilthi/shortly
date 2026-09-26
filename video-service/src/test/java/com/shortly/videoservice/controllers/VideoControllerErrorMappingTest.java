@@ -35,18 +35,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/**
- * Verifies that domain failures become the right HTTP status with the right machine-readable
- * code.
- * <p>
- * This matters more than it looks. Without the advice, an oversized upload surfaces as a 500
- * and the mobile client treats a permanent, user-fixable rejection as a transient server error
- * and retries it forever. These assertions pin the mapping.
- * <p>
- * A {@code @WebMvcTest} slice rather than a full context load: this service owns a Postgres
- * schema and a broker connection, and a context-load test would need real infrastructure to
- * assert almost nothing. The end-to-end behaviour is covered by scripts/e2e-pipeline-test.sh.
- */
+/** Verifies that domain failures become the right HTTP status with the right machine-readable code. */
 @WebMvcTest(VideoController.class)
 @Import({GlobalExceptionHandler.class, CallerIdentityArgumentResolver.class})
 class VideoControllerErrorMappingTest {
@@ -61,12 +50,7 @@ class VideoControllerErrorMappingTest {
     @MockitoBean
     private VideoService videoService;
 
-    /**
-     * Seeds the attribute the gateway filter would normally set.
-     * <p>
-     * The identity is no longer read from a header, so tests supply it the way production does -
-     * as a request attribute. That keeps the test honest about the trust boundary.
-     */
+    /** Seeds the attribute the gateway filter would normally set. */
     private MockHttpServletRequestBuilder asCaller(MockHttpServletRequestBuilder builder,
                                                     String userId) {
         return builder.requestAttr(CallerIdentity.REQUEST_ATTRIBUTE,
@@ -88,8 +72,8 @@ class VideoControllerErrorMappingTest {
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.videoId").value(VIDEO_ID.toString()))
-                // The client needs these to pre-flight the upload instead of discovering the
-                // limits after spending the bandwidth.
+                // The client needs these to pre-flight the upload instead of discovering the limits after spending
+                // the bandwidth.
                 .andExpect(jsonPath("$.maxBytes").value(524288000L))
                 .andExpect(jsonPath("$.maxDurationSeconds").value(60))
                 .andExpect(jsonPath("$.requiresH264").value(true));
@@ -191,8 +175,7 @@ class VideoControllerErrorMappingTest {
                                 """))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("conflicting-state"))
-                // Lets the client distinguish "still working" from "will never work" without
-                // parsing the message.
+                // Lets the client distinguish "still working" from "will never work" without parsing the message.
                 .andExpect(jsonPath("$.currentStatus").value("PROCESSING"));
     }
 
@@ -212,8 +195,8 @@ class VideoControllerErrorMappingTest {
 
     @Test
     void aNegativeTileIndexIsRejected() throws Exception {
-        // An index, not a URL, is what the client sends. Accepting a negative one would let it
-        // address memory outside the sheet.
+        // An index, not a URL, is what the client sends. Accepting a negative one would let it address
+        // memory outside the sheet.
         mockMvc.perform(asCaller(put("/api/v1/videos/{id}/thumbnail", VIDEO_ID), USER)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -225,10 +208,7 @@ class VideoControllerErrorMappingTest {
 
     @Test
     void aMutationWithoutAGatewayIdentityIsRejected() throws Exception {
-        // Every endpoint that writes needs a caller the gateway asserted. Without one there is no
-        // owner to attribute the video to, and defaulting to "anonymous" would silently create
-        // unattributable content. Reaches the handler as a 403, not a 500, because it is a
-        // routing failure rather than a fault.
+        // Every endpoint that writes needs a caller the gateway asserted.
         mockMvc.perform(post("/api/v1/videos/{id}/complete", VIDEO_ID))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("gateway-secret-invalid"));

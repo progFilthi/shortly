@@ -25,8 +25,8 @@ public class VideoMapperImpl implements VideoMapper {
                 video.getId(),
                 video.getTitle(),
                 video.getDescription(),
-                // Before the ladder exists, fall back to the raw object so a client that opens
-                // the video immediately after upload still gets something playable.
+                // Before the ladder exists, fall back to the raw object so a client that opens the video
+                // immediately after upload still gets something playable.
                 video.getHlsManifestUrl() != null ? video.getHlsManifestUrl() : video.getVideoUrl(),
                 video.getPosterUrl(),
                 video.getThumbnailSpriteUrl(),

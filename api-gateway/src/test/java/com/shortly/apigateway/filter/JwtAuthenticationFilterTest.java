@@ -18,13 +18,8 @@ import java.util.Enumeration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * The gateway's token filter.
- *
- * <p>The important behaviour is not "it accepts good tokens" but "it refuses to let a caller
- * choose its own identity". Every test below that involves a forged {@code X-User-Id} exists
- * because if that header ever reached a service, every ownership check downstream is theatre.
- */
+/** The gateway's token filter. The important behaviour is not "it accepts good tokens" but "it
+ * refuses to let a caller choose its own identity". */
 class JwtAuthenticationFilterTest {
 
     private static final String SECRET = Base64.getEncoder().encodeToString(
@@ -88,8 +83,8 @@ class JwtAuthenticationFilterTest {
 
     @Test
     void discardsACallerSuppliedUserIdHeader() throws Exception {
-        // The whole point. A client that sends its own X-User-Id is asking to be someone else,
-        // and what it sent must be replaced by the token's subject rather than forwarded.
+        // The whole point. A client that sends its own X-User-Id is asking to be someone else, and what it
+        // sent must be replaced by the token's subject rather than forwarded.
         String token = codec().issueAccessToken("user-42", "tester", "t@example.com",
                 Duration.ofMinutes(15));
         MockHttpServletRequest request = requestWithToken(token);
@@ -106,8 +101,8 @@ class JwtAuthenticationFilterTest {
 
     @Test
     void doesNotLeakTheForgedHeaderUnderAnAlternateCapitalisation() throws Exception {
-        // HTTP header names are case-insensitive, and a service reading "x-user-id" would
-        // otherwise still see the attacker's value.
+        // HTTP header names are case-insensitive, and a service reading "x-user-id" would otherwise still
+        // see the attacker's value.
         String token = codec().issueAccessToken("user-42", "tester", "t@example.com",
                 Duration.ofMinutes(15));
         MockHttpServletRequest request = requestWithToken(token);
@@ -124,8 +119,8 @@ class JwtAuthenticationFilterTest {
 
     @Test
     void stripsTheGatewaySecretSoACallerSuppliedOneNeverArrives() throws Exception {
-        // Services require this header. If a client's guess were forwarded, the requirement
-        // would be no requirement at all.
+        // Services require this header. If a client's guess were forwarded, the requirement would be no
+        // requirement at all.
         String token = codec().issueAccessToken("user-42", "tester", "t@example.com",
                 Duration.ofMinutes(15));
         MockHttpServletRequest request = requestWithToken(token);
@@ -135,8 +130,7 @@ class JwtAuthenticationFilterTest {
 
         new JwtAuthenticationFilter(codec()).doFilter(request, response, chain);
 
-        // The real value is added by the route filter from gateway configuration, never by the
-        // caller.
+        // The real value is added by the route filter from gateway configuration, never by the caller.
         assertThat(downstream(chain).getHeader(InternalHeaders.GATEWAY_SECRET)).isNull();
     }
 
@@ -156,9 +150,8 @@ class JwtAuthenticationFilterTest {
         assertThat(Collections.list(downstream(chain).getHeaderNames()))
                 .contains(InternalHeaders.USER_ID, InternalHeaders.USERNAME, InternalHeaders.EMAIL);
 
-        // The caller's own copies are not enumerated, so nothing downstream can go looking for
-        // them and find "admin". X-Gateway-Secret is absent entirely: the real value is appended
-        // later by the route filter, from gateway configuration.
+        // The caller's own copies are not enumerated, so nothing downstream can go looking for them and
+        // find "admin". X-Gateway-Secret is absent entirely:
         assertThat(Collections.list(downstream(chain).getHeaderNames()))
                 .doesNotContain(InternalHeaders.GATEWAY_SECRET);
     }
@@ -179,8 +172,8 @@ class JwtAuthenticationFilterTest {
 
     @Test
     void distinguishesExpiredFromInvalid() throws Exception {
-        // The client has to be able to tell "refresh and retry" from "sign in again", and it
-        // cannot do that if both come back as an undifferentiated 401.
+        // The client has to be able to tell "refresh and retry" from "sign in again", and it cannot do
+        // that if both come back as an undifferentiated 401.
         String token = codec().issueAccessToken("user-42", "tester", "t@example.com",
                 Duration.ofMinutes(15));
         // Verified against a clock 16 minutes on, so the token is past its expiry.
@@ -214,8 +207,8 @@ class JwtAuthenticationFilterTest {
 
     @Test
     void skipsPublicPathsEntirely() throws Exception {
-        // Auth endpoints and health must work with no token at all. shouldNotFilter is what makes
-        // that true; if it ever stops matching, login silently breaks.
+        // Auth endpoints and health must work with no token at all. shouldNotFilter is what makes that
+        // true; if it ever stops matching, login silently breaks.
         JwtAuthenticationFilter filter = new JwtAuthenticationFilter(codec());
 
         for (String path : new String[]{"/api/v1/auth/login", "/api/v1/auth/refresh",

@@ -8,14 +8,7 @@ import tools.jackson.core.type.TypeReference;
 
 import java.util.List;
 
-/**
- * Stores the adaptive ladder as a JSON array on the video row.
- * <p>
- * Deliberately not a child table. The ladder is only ever read and written as a whole - there
- * is no query that needs "all videos with a 540p rendition" and no partial update - so a join
- * table would add a second entity, a second repository and a cascade for no query benefit. If
- * that query ever appears, this is the thing to replace.
- */
+/** Stores the adaptive ladder as a JSON array on the video row. Deliberately not a child table. */
 @Converter
 public class RenditionListConverter implements AttributeConverter<List<RenditionInfo>, String> {
 
@@ -39,9 +32,8 @@ public class RenditionListConverter implements AttributeConverter<List<Rendition
         try {
             return MAPPER.readValue(dbData, TYPE);
         } catch (RuntimeException e) {
-            // A row written by an older build, or hand-edited, must not make the whole
-            // entity unreadable. An empty ladder degrades to "playback only"; a thrown
-            // exception would take down the feed.
+            // A row written by an older build, or hand-edited, must not make the whole entity unreadable. An
+            // empty ladder degrades to "playback only";
             return List.of();
         }
     }

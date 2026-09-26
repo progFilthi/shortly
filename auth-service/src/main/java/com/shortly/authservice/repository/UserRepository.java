@@ -11,14 +11,7 @@ public interface UserRepository extends JpaRepository<User, String> {
 
     boolean existsByUsernameIgnoreCase(String username);
 
-    /**
-     * Resolves a sign-in identifier, which the client may present as either a username or an
-     * email.
-     * <p>
-     * Returns two candidates rather than one so the caller can run a single, constant-time
-     * password check. Querying one and falling back to the other would leak which identifier
-     * exists through response timing.
-     */
+    /** Resolves a sign-in identifier, which the client may present as either a username or an email. */
     Optional<User> findByUsernameIgnoreCase(String identifier);
 
     Optional<User> findByEmailIgnoreCase(String identifier);

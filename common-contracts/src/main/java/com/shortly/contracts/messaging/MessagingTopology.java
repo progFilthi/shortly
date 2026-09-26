@@ -1,13 +1,6 @@
 package com.shortly.contracts.messaging;
 
-/**
- * Canonical AMQP topology for the video pipeline.
- * <p>
- * Constants only - no topology is declared here. Each service declares the exchanges and
- * queues it needs (producer declares what it publishes, consumer declares what it consumes),
- * which keeps the contract module free of framework dependencies and lets services be
- * deployed independently.
- */
+/** Canonical AMQP topology for the video pipeline. Constants only - no topology is declared here. */
 public final class MessagingTopology {
 
     private MessagingTopology() {

@@ -1,11 +1,7 @@
 package com.shortly.videoservice.services;
 
-/**
- * An upload did not pass verification: absent, empty, or over the size ceiling.
- * <p>
- * Distinguished from a generic runtime error because the client should see a specific 4xx
- * with an actionable message - "your file is 612 MB, the limit is 500 MB" - rather than a 500.
- */
+/** An upload did not pass verification: absent, empty, or over the size ceiling. Distinguished from
+ * - "your file is 612 MB, the limit is 500 MB" - rather than a 500. */
 public class UploadVerificationException extends RuntimeException {
 
     public enum Kind {

@@ -6,12 +6,7 @@ import org.springframework.http.ProblemDetail;
 
 import java.util.Map;
 
-/**
- * Base for auth-service failures, so one handler can translate them.
- *
- * <p>Each subclass declares its {@link ApiError} and whether it is retryable. The handler reads
- * those two facts instead of a growing chain of {@code instanceof} checks.
- */
+/** Base for auth-service failures, so one handler can translate them. */
 public abstract class AuthException extends RuntimeException {
 
     private final ApiError error;
@@ -30,10 +25,7 @@ public abstract class AuthException extends RuntimeException {
         return error;
     }
 
-    /**
-     * Extra problem properties to merge in, for the codes that carry structured detail.
-     * Default is none.
-     */
+    /** Extra problem properties to merge in, for the codes that carry structured detail. */
     public Map<String, Object> problemDetails() {
         return Map.of();
     }

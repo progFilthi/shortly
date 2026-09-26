@@ -4,18 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
-/**
- * Request to begin an upload.
- * <p>
- * {@code contentType} is constrained to a video allow-list here rather than trusted. It is
- * used for two things - picking the s3 key suffix and being embedded in the presigned
- * signature - so an unchecked value would let a caller store arbitrary bytes at a {@code .mp4}
- * key and have the platform advertise it as a video.
- *
- * @param title       display title
- * @param description optional longer text
- * @param contentType MIME type of the bytes about to be uploaded
- */
+/** Request to begin an upload. */
 public record CreateS3PresignedUrlRequest(
 
         @NotBlank(message = "title is required")

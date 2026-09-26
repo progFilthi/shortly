@@ -11,10 +11,8 @@ import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * The gateway-secret check is the reason a service behind the gateway can trust its identity
- * headers at all. Covered directly, since the controller slice runs with the check disabled.
- */
+/** The gateway-secret check is the reason a service behind the gateway can trust its identity
+ * headers at all. */
 class GatewaySecretFilterTest {
 
     private static final String SECRET = "s3cr3t-gateway-value";
@@ -67,8 +65,8 @@ class GatewaySecretFilterTest {
 
     @Test
     void failsClosedWhenNoSecretIsConfigured() throws Exception {
-        // A service started without its secret must reject everything, not accept everything.
-        // Failing open here would turn a missing environment variable into a total auth bypass.
+        // A service started without its secret must reject everything, not accept everything. Failing open
+        // here would turn a missing environment variable into a total auth bypass.
         MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/v1/auth/login");
         request.addHeader(InternalHeaders.GATEWAY_SECRET, "");
         MockHttpServletResponse response = new MockHttpServletResponse();

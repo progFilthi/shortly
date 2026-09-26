@@ -1,25 +1,8 @@
-#!/usr/bin/env bash
-#
-# End-to-end smoke test for the upload -> transcode -> HLS pipeline.
-#
-# Exercises the whole path against the running compose stack:
-#   1. validation rejects bad requests
-#   2. mint a presigned upload target, PUT real bytes straight to object storage
-#   3. confirm the upload, which publishes VideoUploadedEvent
-#   4. transcoder-service consumes it and publishes video.ready
-#   5. assert the row reached READY with a real, correct ladder
-#   6. assert every playlist and segment is actually fetchable
-#   7. assert consumer idempotency under duplicate and out-of-order events
-#
-# Exits non-zero on the first failed assertion, dumping both service logs so a failure is
-# diagnosable without a second command.
+# !/usr/bin/env bash
 
 set -euo pipefail
 
-# Through the gateway, not straight to video-service. The service now rejects anything without
-# the internal gateway secret, so calling it directly is both unsupported and impossible - which
-# is the point. Registering a throwaway user here also means the E2E exercises the same identity
-# path the iOS client will.
+# Through the gateway, not straight to video-service.
 VIDEO_URL="${VIDEO_URL:-http://localhost:8080}"
 S3_PUBLIC="${S3_PUBLIC:-http://localhost:4566}"
 RABBIT_API="${RABBIT_API:-http://localhost:15672}"
@@ -44,9 +27,8 @@ trap cleanup EXIT
 
 jq_get() { python3 -c "import json,sys;print(json.load(sys.stdin)$1)"; }
 
-# Presigns are generated with the in-container endpoint, which the host cannot resolve.
-# Local-networking artifact only: against real S3 the presign is a genuine AWS URL.
-# Reads the URL on stdin, so it composes in a pipeline.
+# Presigns are generated with the in-container endpoint, which the host cannot resolve. Local-
+# networking artifact only: against real S3 the presign is a genuine AWS URL.
 to_public() { sed "s|http://localstack:4566|${S3_PUBLIC}|"; }
 
 # Uses auth_curl, so the video is attributed to the registered user rather than to whatever
@@ -249,9 +231,7 @@ pass "403"
 
 # ------------------------------------------------------------- idempotency checks
 step "A duplicate video.ready is ignored rather than re-applied"
-# Carries an empty rendition list and absurd values on purpose. If the handler re-applied the
-# event instead of recognising the duplicate, the row would be corrupted and the assertions
-# below would fail - which is exactly the regression this guards.
+# Carries an empty rendition list and absurd values on purpose.
 DUP=$(python3 - "$WORKDIR/ready.json" "$USER_ID" <<'PY'
 import json, sys
 v = json.load(open(sys.argv[1]))

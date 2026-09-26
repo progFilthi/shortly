@@ -23,21 +23,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
 
-/**
- * Uploads a locally-produced ladder to object storage.
- * <p>
- * Two decisions here carry the weight:
- * <p>
- * <b>Concurrency.</b> A 6-rung, 60-second ladder is 187 objects. Issued sequentially over a
- * blocking client that is hundreds of round trips of pure latency, which would dominate the
- * job's wall time for no benefit. Issued concurrently it is a few hundred milliseconds.
- * <p>
- * <b>Manifests last.</b> {@code master.m3u8} is uploaded only after every segment and every
- * media playlist is durable. This is the correctness mechanism for the whole pipeline: until
- * the master exists, a player handed the URL gets a 404 and nothing can serve a ladder that
- * is 40% uploaded. It also means an interrupted job leaves unreachable objects rather than a
- * playable-but-broken one, so a lifecycle rule on the output prefix is enough to reap them.
- */
+/** Uploads a locally-produced ladder to object storage. Manifests last. {@code master.m3u8} is
+ * uploaded only after every segment and every media playlist is durable. */
 @Component
 public class HlsUploader {
 
@@ -57,12 +44,8 @@ public class HlsUploader {
         this.properties = properties;
     }
 
-    /**
-     * Uploads every artifact for one job and returns the keys it wrote, so the caller can
-     * clean them up if a later step fails.
-     *
-     * @throws StorageException if any artifact fails to upload
-     */
+    /** Uploads every artifact for one job and returns the keys it wrote, so the caller can clean them
+     * up if a later step fails. @throws StorageException if any artifact fails to upload */
     public List<String> upload(UUID videoId, Path hlsDir, List<String> renditionNames) {
         List<Upload> segments = new ArrayList<>();
         List<Upload> mediaPlaylists = new ArrayList<>();
@@ -103,8 +86,8 @@ public class HlsUploader {
         log.info("Uploading ladder for {}: {} segment(s), {} media playlist(s), 1 master manifest",
                 videoId, segments.size(), mediaPlaylists.size());
 
-        // Segments and media playlists in parallel, bounded. Then the master, alone, once
-        // everything it references is durable.
+        // Segments and media playlists in parallel, bounded. Then the master, alone, once everything it
+        // references is durable.
         List<String> keys = new ArrayList<>();
         keys.addAll(uploadAll(segments));
         keys.addAll(uploadAll(mediaPlaylists));
@@ -114,15 +97,7 @@ public class HlsUploader {
         return List.copyOf(keys);
     }
 
-    /**
-     * Fans out with a bounded number of in-flight requests.
-     * <p>
-     * The bound is the point. All 187 requests issued at once would exhaust the connection
-     * pool, the file-descriptor table and the heap holding the file bodies, and the resulting
-     * failure is far harder to diagnose than a slightly slower upload. A semaphore lets every
-     * future start immediately - so there is no head-of-line blocking - while only
-     * {@code uploadConcurrency} of them are actually waiting on the network.
-     */
+    /** Fans out with a bounded number of in-flight requests. */
     private List<String> uploadAll(List<Upload> uploads) {
         if (uploads.isEmpty()) {
             return List.of();
@@ -181,9 +156,7 @@ public class HlsUploader {
             return files.filter(Files::isRegularFile)
                     .filter(path -> {
                         String name = path.getFileName().toString();
-                        // Never upload ffmpeg's own scratch files. -hls_flags temp_file means a
-                        // killed job leaves .tmp files behind, and publishing one would give
-                        // a player a segment it cannot parse.
+                        // Never upload ffmpeg's own scratch files. -hls_flags temp_file means a killed job leaves .
                         return !name.endsWith(".tmp") && !name.equals("index.m3u8");
                     })
                     .sorted(Comparator.comparing(path -> path.getFileName().toString()))

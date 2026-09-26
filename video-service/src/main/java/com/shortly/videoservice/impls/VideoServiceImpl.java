@@ -43,11 +43,7 @@ public class VideoServiceImpl implements VideoService {
     @Override
     @Transactional
     public CreateS3PresignedUrlResponse createVideo(CreateS3PresignedUrlRequest request, String userId) {
-        /*
-         * The id is generated up front so the database row and the storage key can be written
-         * together. Deriving the key from the id later would mean a second round trip and a
-         * window in which the row exists with no key.
-         */
+        /** The id is generated up front so the database row and the storage key can be written together. */
         UUID videoId = UUID.randomUUID();
         String s3Key = properties.sourceKey(userId, videoId, extensionFor(request.contentType()));
 
@@ -71,21 +67,8 @@ public class VideoServiceImpl implements VideoService {
                 properties.preferH264FromClients());
     }
 
-    /**
-     * Confirms an upload and hands the video to the transcoder.
-     * <p>
-     * Three things happen here that did not before, and each one closes a hole:
-     * <ol>
-     *   <li><b>The object is verified against the bucket.</b> Previously this endpoint trusted
-     *       the client's claim that an upload had happened; a caller could mark any videoId
-     *       READY without a byte ever being written.</li>
-     *   <li><b>The status becomes PROCESSING, not READY.</b> The video is not playable yet,
-     *       and publishing READY here is what made {@code PROCESSING} unreachable. READY is now
-     *       set only by the transcoder's {@code video.ready} event.</li>
-     *   <li><b>The authoritative size travels with the event</b>, so the transcoder is not
-     *       asked to re-derive what we already know.</li>
-     * </ol>
-     */
+    /** Confirms an upload and hands the video to the transcoder. The object is verified against the
+     * {@code PROCESSING} unreachable. */
     @Override
     @Transactional
     public VideoResponse confirmUploadComplete(UUID videoId, String userId) {
@@ -97,9 +80,8 @@ public class VideoServiceImpl implements VideoService {
         }
 
         if (video.getVideoStatus() == VideoStatus.PROCESSING) {
-            // Duplicate /complete from a retrying client. Republishing would re-enqueue a
-            // transcode the transcoder may already be running; the event carries an id the
-            // transcoder deduplicates on anyway, but not doing the work twice is cheaper.
+            // Duplicate /complete from a retrying client. Republishing would re-enqueue a transcode the
+            // transcoder may already be running;
             log.info("Video {} is already PROCESSING; acknowledging without republishing", videoId);
             return videoMapper.toResponse(video);
         }
@@ -113,11 +95,8 @@ public class VideoServiceImpl implements VideoService {
         try {
             uploaded = s3StorageService.verifyUploadedObject(video.getS3Key());
         } catch (UploadVerificationException e) {
-            /*
-             * The upload is not salvageable, so the row must not sit in UPLOADING forever
-             * waiting for a job that will never be enqueued. Mark it FAILED and, for an
-             * oversized object, delete it immediately so the bytes stop costing money.
-             */
+            /** The upload is not salvageable, so the row must not sit in UPLOADING forever waiting for a job
+             * that will never be enqueued. */
             video.setVideoStatus(VideoStatus.FAILED);
             video.setFailureReason("UPLOAD_" + e.kind().name());
             video.setFailureMessage(truncate(e.getMessage()));
@@ -153,13 +132,8 @@ public class VideoServiceImpl implements VideoService {
         return videoMapper.toResponse(saved);
     }
 
-    /**
-     * Records the cover frame the user picked from the sprite sheet.
-     * <p>
-     * The client sends a tile index, not a URL or a timestamp: the sheet is immutable for a
-     * given video, so an index is the only identifier that cannot be forged into a URL pointing
-     * somewhere else.
-     */
+    /** Records the cover frame the user picked from the sprite sheet. The client sends a tile index,
+     * identifier that cannot be forged into a URL pointing somewhere else. */
     @Override
     @Transactional
     public VideoResponse selectThumbnail(UUID videoId, SelectThumbnailRequest request, String userId) {
@@ -200,13 +174,8 @@ public class VideoServiceImpl implements VideoService {
                 .toList();
     }
 
-    /**
-     * Maps a declared MIME type to a storage suffix.
-     * <p>
-     * The request is validated against a video allow-list before reaching here, so an unknown
-     * type is a programming error rather than untrusted input. {@code .mp4} is still the
-     * fallback so an unmapped-but-valid type cannot produce a key with no extension.
-     */
+    /** Maps a declared MIME type to a storage suffix. The request is validated against a video allow-
+     * with no extension. */
     private String extensionFor(String contentType) {
         if (contentType == null) {
             return ".mp4";

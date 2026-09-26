@@ -8,19 +8,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * Rotation handling is the single easiest thing to get silently wrong in a video pipeline.
- * <p>
- * iPhone portrait video is stored as 1920x1080 with a 90° display matrix. ffmpeg applies that
- * matrix while decoding, so the encoder sees a 1080x1920 picture — but ffprobe still reports
- * 1920x1080, and every width/height-based check (duration limits, resolution limits, ladder
- * rung selection) would then be reasoning about the wrong orientation.
- * <p>
- * These tests cover the logic this service owns: reading the matrix out of the probe result,
- * normalising its sign, and swapping the reported dimensions. They deliberately do NOT claim to
- * cover ffmpeg's own decode-time rotation, which cannot be exercised here because ffmpeg 8
- * cannot write a display matrix — see docs/transcoding.md §13.
- */
+/** Rotation handling is the single easiest thing to get silently wrong in a video pipeline. */
 class MediaProbeRotationTest {
 
     @Test
@@ -35,9 +23,7 @@ class MediaProbeRotationTest {
 
     @Test
     void matchesTheExactSideDataTypeFfprobeEmits() {
-        // The literal string ffprobe writes is "Display Matrix", with a space. A naive
-        // contains("displaymatrix") check on the lowercased value never matches, which turns
-        // rotation detection off silently - so this asserts the real value, not a convenient one.
+        // The literal string ffprobe writes is "Display Matrix", with a space.
         FFmpegStream.SideData matrix = new FFmpegStream.SideData();
         matrix.side_data_type = "Display Matrix";
         matrix.rotation = -90;
@@ -71,10 +57,8 @@ class MediaProbeRotationTest {
 
     @Test
     void reportsRotationAsClockwiseDegrees() {
-        // ffprobe reports the display matrix COUNTER-clockwise, and the common iPhone portrait
-        // case is a negative angle (-90). Everything downstream wants clockwise, so the sign is
-        // flipped: raw -90 becomes 90, which is also what makes the width/height swap come out
-        // right, since -90 CCW is a 90 CW turn.
+        // ffprobe reports the display matrix COUNTER-clockwise, and the common iPhone portrait case is a
+        // negative angle (-90).
         assertThat(readRotation(streamWithSideData(matrixWith(-90)))).isEqualTo(90);
         assertThat(readRotation(streamWithSideData(matrixWith(90)))).isEqualTo(270);
         assertThat(readRotation(streamWithSideData(matrixWith(180)))).isEqualTo(180);
@@ -83,9 +67,8 @@ class MediaProbeRotationTest {
 
     @Test
     void aQuarterTurnInEitherDirectionSwapsTheDimensions() {
-        // The invariant the pipeline actually depends on. Both 90 and 270 are quarter turns, so
-        // both must swap; getting the sign convention wrong must not change that, or a portrait
-        // iPhone clip gets validated and laddered as if it were landscape.
+        // The invariant the pipeline actually depends on. Both 90 and 270 are quarter turns, so both must
+        // swap;
         for (int raw : new int[]{-90, 90, -270, 270}) {
             int clockwise = readRotation(streamWithSideData(matrixWith(raw)));
             assertThat(clockwise == 90 || clockwise == 270)
@@ -96,8 +79,8 @@ class MediaProbeRotationTest {
 
     @Test
     void keepsZeroAtZeroRatherThanMappingItTo360() {
-        // A 0 rotation reported as 360 would not break the quarter-turn check, but it would log
-        // a full turn for a clip that has none and would defeat any future "is rotated" check.
+        // A 0 rotation reported as 360 would not break the quarter-turn check, but it would log a full
+        // turn for a clip that has none and would defeat any future "is rotated" check.
         assertThat(readRotation(streamWithSideData(matrixWith(0)))).isZero();
     }
 
@@ -153,8 +136,8 @@ class MediaProbeRotationTest {
 
     @Test
     void treatsAnUnreportableDurationAsUnreliable() {
-        // Duration zero must not be read as "an instant video"; it means the container did not
-        // say, and the validator turns that into a terminal SOURCE_CORRUPT.
+        // Duration zero must not be read as "an instant video"; it means the container did not say, and
+        // the validator turns that into a terminal SOURCE_CORRUPT.
         assertThat(withDuration(Duration.ZERO).durationReliable()).isFalse();
         assertThat(withDuration(Duration.ofSeconds(1)).durationReliable()).isTrue();
         assertThat(withDuration(Duration.ofSeconds(-1)).durationReliable()).isFalse();

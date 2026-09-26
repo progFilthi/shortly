@@ -18,17 +18,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.List;
 
-/**
- * Turns a valid access token into an authenticated request identity.
- *
- * <p>Rejects a token that is present but invalid, rather than falling through to anonymous. A
- * client holding a stale token must be told so; letting it through unauthenticated would make a
- * logged-out user look like an anonymous one and hide the reason their request failed.
- * <p>
- * {@code @Order} is required, not decorative. This class is both a {@code Filter} bean and a
- * member of the security filter chain, and Spring Security has to resolve an order for a
- * registered filter; without the annotation the chain fails to build at startup.
- */
+/** Turns a valid access token into an authenticated request identity. {@code @Order} is required,
+ * not decorative. */
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider tokenProvider;
@@ -54,9 +45,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         var verification = tokenProvider.codec().verify(token);
 
         if (!verification.succeeded()) {
-            // Distinguish the two, because the recovery differs: expired means refresh and
-            // retry, invalid means sign in again. Collapsing them leaves a client unable to
-            // recover on its own.
+            // Distinguish the two, because the recovery differs: expired means refresh and retry, invalid
+            // means sign in again.
             if (verification.failure() == JwtCodec.FailureReason.EXPIRED) {
                 ProblemResponses.write(response, HttpStatus.UNAUTHORIZED, "token-expired",
                         "Access token has expired. Refresh and retry.");

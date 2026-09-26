@@ -21,22 +21,14 @@ import java.time.ZoneOffset;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
-/**
- * Shared fixtures for auth-service tests.
- *
- * <p>Two things every test here needs and neither should assemble itself: a full
- * {@link AuthProperties} with fast values, and a clock the test can move. Token expiry and account
- * lockouts are both time-dependent, and asserting them with a real clock means either sleeping or
- * writing flaky tests.
- */
+/** Shared fixtures for auth-service tests. Two things every test here needs and neither should
+ * assemble itself: a full {@link AuthProperties} with fast values, and a clock the test can move. */
 public final class TestFixtures {
 
     public static final String PASSWORD = "correct-horse-battery";
     public static final Instant NOW = Instant.parse("2026-01-15T12:00:00Z");
 
-    /**
-     * A mutable clock, so a test can advance past an expiry without waiting.
-     */
+    /** A mutable clock, so a test can advance past an expiry without waiting. */
     public static final class MutableClock extends Clock {
 
         private Instant now = NOW;
@@ -64,10 +56,8 @@ public final class TestFixtures {
     private TestFixtures() {
     }
 
-    /**
-     * Test-tuned properties: a cheap BCrypt cost so hashing does not dominate the run, and short
-     * windows so expiry is reachable in one assertion.
-     */
+    /** Test-tuned properties: a cheap BCrypt cost so hashing does not dominate the run, and short
+     * windows so expiry is reachable in one assertion. */
     public static AuthProperties properties() {
         return new AuthProperties(
                 Duration.ofMinutes(15),        // accessTokenTtl
@@ -123,12 +113,7 @@ public final class TestFixtures {
                 clock);
     }
 
-    /**
-     * A real LoginAttemptService, not a mock. The lockout tests are about whether the failure
-     * counter commits independently of the exception that accompanies it, and a mocked
-     * collaborator would stub that behaviour away - which is precisely the bug it exists to
-     * prevent.
-     */
+    /** A real LoginAttemptService, not a mock. */
     public static LoginAttemptService loginAttempts(UserRepository users,
                                                     AuthProperties properties,
                                                     Clock clock) {

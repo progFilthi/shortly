@@ -13,24 +13,14 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Extracts the poster frame and the scrub sprite sheet.
- *
- * <p>This service is the only one with ffmpeg, so it is the only place cover art can be made -
- * and doing it here reuses the already-downloaded source, so it costs no extra transfer.
- *
- * <p>Sampling is uniform but skips the first half second, which for a phone recording is
- * usually a black or half-opened-camera frame and makes a terrible default cover.
- */
+/** Extracts the poster frame and the scrub sprite sheet. This service is the only one with ffmpeg,
+ * source, so it costs no extra transfer. */
 @Component
 public class ThumbnailExtractor {
 
     private static final Logger log = LoggerFactory.getLogger(ThumbnailExtractor.class);
 
-    /**
-     * A still at t=0 is very often a black frame or a partially-opened camera. Skipping the
-     * opening of every clip costs nothing and makes the default cover dramatically better.
-     */
+    /** A still at t=0 is very often a black frame or a partially-opened camera. */
     private static final double FIRST_SAMPLE_SECONDS = 0.5;
 
     /** Below this the frame rate of the output image is meaningless. */
@@ -44,11 +34,7 @@ public class ThumbnailExtractor {
         this.properties = properties;
     }
 
-    /**
-     * Produces {@code poster.jpg} and {@code sprite.jpg} in the given directory.
-     *
-     * @return the sampling grid used, or empty when the clip is too short to sample
-     */
+    /** Produces {@code poster.jpg} and {@code sprite.jpg} in the given directory. */
     public List<Double> extract(Path source, MediaMetadata metadata, Path outputDir) {
         double durationSeconds = metadata.duration().toMillis() / 1000.0;
         if (durationSeconds <= FIRST_SAMPLE_SECONDS) {
@@ -86,8 +72,7 @@ public class ThumbnailExtractor {
                 "-ss", format(timestampSeconds),
                 "-i", source.toAbsolutePath().toString(),
                 "-frames:v", "1",
-                // Same tone map as the ladder, so the cover is not a different grade
-                // from the video it represents.
+                // Same tone map as the ladder, so the cover is not a different grade from the video it represents.
                 "-vf", "scale=" + width + ":" + height + ":force_original_aspect_ratio=increase"
                         + ",crop=" + width + ":" + height + ",setsar=1",
                 "-q:v", "2",
@@ -98,11 +83,8 @@ public class ThumbnailExtractor {
                 "poster extraction", destination);
     }
 
-    /**
-     * One image containing every candidate frame in a grid, from a single ffmpeg pass: a
-     * {@code select} over an explicit frame list plus the {@code tile} layout filter. Sampling
-     * frames individually and compositing separately would re-decode the source N times.
-     */
+    /** One image containing every candidate frame in a grid, from a single ffmpeg pass: a {@code
+     * select} over an explicit frame list plus the {@code tile} layout filter. */
     private void extractSprite(Path source, Path destination, List<Double> intervals) {
         int tileWidth = properties.spriteTileWidth();
         int tileHeight = tileHeightFor(tileWidth);
@@ -114,8 +96,8 @@ public class ThumbnailExtractor {
             if (i > 0) {
                 select.append('+');
             }
-            // between(t, t, t+epsilon) keeps the frame nearest the sampled instant without
-            // requiring an exact PTS match, which real captures never have.
+            // between(t, t, t+epsilon) keeps the frame nearest the sampled instant without requiring an exact
+            // PTS match, which real captures never have.
             select.append("between(t,").append(format(intervals.get(i)))
                     .append(',').append(format(intervals.get(i) + 0.05)).append(')');
         }
@@ -141,11 +123,7 @@ public class ThumbnailExtractor {
                 "sprite extraction", destination);
     }
 
-    /**
-     * Derives tile height from tile width using the canonical 9:16 ratio, forced even.
-     * Fixing the aspect here rather than per-tile keeps the whole grid uniform, which is what
-     * lets the client index tiles with plain arithmetic.
-     */
+    /** Derives tile height from tile width using the canonical 9:16 ratio, forced even. */
     private int tileHeightFor(int width) {
         int height = Math.round(width * 16f / 9f);
         return Math.max(MIN_TILE_HEIGHT, height % 2 == 0 ? height : height + 1);

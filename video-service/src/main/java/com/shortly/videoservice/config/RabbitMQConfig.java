@@ -27,13 +27,7 @@ import tools.jackson.databind.json.JsonMapper;
 
 import java.util.Map;
 
-/**
- * AMQP topology for video-service.
- * <p>
- * Declares the shared exchange, the work queue the transcoder consumes, and the two queues
- * this service consumes outcomes from. Constants come from {@code common-contracts} so there
- * is exactly one definition of each name.
- */
+/** AMQP topology for video-service. */
 @Configuration
 public class RabbitMQConfig {
 
@@ -47,14 +41,7 @@ public class RabbitMQConfig {
         return new DirectExchange(MessagingTopology.DEAD_LETTER_EXCHANGE, true, false);
     }
 
-    /**
-     * The work queue, declared here as well as in the transcoder.
-     * <p>
-     * Both ends declare it with identical arguments so the topology converges whichever service
-     * starts first. If only the producer declared it, a transcoder-only deployment would fail
-     * with a missing-queue error, and if only the consumer declared it, work published before
-     * the transcoder started would be silently dropped.
-     */
+    /** The work queue, declared here as well as in the transcoder. */
     @Bean
     public Queue videoUploadedQueue() {
         return QueueBuilder.durable(MessagingTopology.VIDEO_UPLOADED_QUEUE)
@@ -130,12 +117,8 @@ public class RabbitMQConfig {
     public MessageConverter jsonMessageConverter(JsonMapper jsonMapper) {
         JacksonJsonMessageConverter converter = new JacksonJsonMessageConverter(jsonMapper);
 
-        /*
-         * Both services interpret the __TypeId__ header through an explicit map instead of
-         * resolving it reflectively, and fall back to the listener's declared parameter type
-         * when a header cannot be mapped. A producer that renames a contract record therefore
-         * degrades to "deserialize from the JSON body" rather than dead-lettering every message.
-         */
+        /** Both services interpret the __TypeId__ header through an explicit map instead of resolving it
+         * mapped. */
         DefaultJacksonJavaTypeMapper typeMapper = new DefaultJacksonJavaTypeMapper();
         typeMapper.setIdClassMapping(Map.of(
                 VideoUploadedEvent.class.getName(), VideoUploadedEvent.class,
@@ -148,14 +131,8 @@ public class RabbitMQConfig {
         return converter;
     }
 
-    /**
-     * Listener tuning for the two outcome queues.
-     * <p>
-     * These handlers are a single indexed UPDATE, not minutes of CPU work, so the prefetch here
-     * is deliberately higher than the transcoder's. A low prefetch here would throttle status
-     * updates for no benefit - the opposite trade-off from the ffmpeg worker, where prefetch 1
-     * is a correctness requirement.
-     */
+    /** Listener tuning for the two outcome queues. These handlers are a single indexed UPDATE, not
+     * minutes of CPU work, so the prefetch here is deliberately higher than the transcoder's. */
     @Bean
     public SimpleRabbitListenerContainerFactory videoListenerContainerFactory(
             ConnectionFactory connectionFactory,

@@ -2,14 +2,8 @@ package com.shortly.authservice.exceptions;
 
 import com.shortly.contracts.errors.ApiError;
 
-/**
- * A refresh token was unknown, expired, already rotated, or explicitly revoked.
- *
- * <p>One exception and one message for all four cases, deliberately. Telling a caller "this
- * token was already used" confirms the token was genuine, which is leverage for anyone holding a
- * stolen token pair. The client only needs to know it must sign in again; the specific cause goes
- * to the log.
- */
+/** A refresh token was unknown, expired, already rotated, or explicitly revoked. One exception and
+ * one message for all four cases, deliberately. */
 public class RefreshTokenInvalidException extends AuthException {
 
     public RefreshTokenInvalidException() {

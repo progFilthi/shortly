@@ -7,12 +7,8 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * The ladder is persisted as JSON, which means a schema mismatch between the transcoder's
- * record and this converter's expectations is a runtime failure on read rather than a compile
- * error. These assertions pin the round trip and, more importantly, the behaviour on damaged
- * data.
- */
+/** The ladder is persisted as JSON, which means a schema mismatch between the transcoder's record
+ * and this converter's expectations is a runtime failure on read rather than a compile error. */
 class RenditionListConverterTest {
 
     private final RenditionListConverter converter = new RenditionListConverter();
@@ -32,8 +28,8 @@ class RenditionListConverterTest {
 
     @Test
     void storesNullForAnAbsentLadder() {
-        // A video that has not been transcoded has no ladder. Storing "[]" instead of NULL
-        // would make "never transcoded" indistinguishable from "transcoded to nothing".
+        // A video that has not been transcoded has no ladder. Storing "[]" instead of NULL would make
+        // "never transcoded" indistinguishable from "transcoded to nothing".
         assertThat(converter.convertToDatabaseColumn(null)).isNull();
         assertThat(converter.convertToDatabaseColumn(List.of())).isNull();
     }
@@ -47,17 +43,15 @@ class RenditionListConverterTest {
 
     @Test
     void degradesToAnEmptyLadderOnCorruptJsonRatherThanFailing() {
-        // A hand-edited or truncated column must not make the whole entity unreadable. Throwing
-        // here would take down the feed for every user, when the real cost is only a missing
-        // rendition list on one video.
+        // A hand-edited or truncated column must not make the whole entity unreadable.
         assertThat(converter.convertToEntityAttribute("{not json")).isEmpty();
         assertThat(converter.convertToEntityAttribute("[{\"name\":\"v0\"}")).isEmpty();
     }
 
     @Test
     void toleratesAnUnknownFieldFromANewerProducer() {
-        // Forward compatibility: a transcoder that adds a field must not break an older
-        // video-service, or a rolling deploy deadlocks the two against each other.
+        // Forward compatibility: a transcoder that adds a field must not break an older video-service, or
+        // a rolling deploy deadlocks the two against each other.
         String fromTheFuture = """
                 [{"name":"v0","width":1080,"height":1920,"videoKbps":4500,
                   "audioKbps":128,"futureField":"ignored"}]

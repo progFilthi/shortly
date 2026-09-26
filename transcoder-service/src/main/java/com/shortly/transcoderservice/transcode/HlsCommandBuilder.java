@@ -10,25 +10,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.StringJoiner;
 
-/**
- * Builds the single ffmpeg invocation that produces the whole ladder.
- *
- * <p>One process, not one per rung: the source is decoded once and the frames fanned out to
- * every encoder. Six separate encodes decode it six times, which is the largest single cost
- * lever here.
- *
- * <p>Two ffmpeg constraints shape the audio handling, both verified against 8.1.2:
- * <ul>
- *   <li>Reusing an audio index across variants ({@code v:0,a:0 v:1,a:0}) aborts with "Same
- *       elementary stream found more than once". Each variant needs its own index, hence
- *       {@code asplit}.</li>
- *   <li>With no audio stream at all, {@code [0:a]asplit} matches nothing and takes the whole
- *       filtergraph down. So the graph is built conditionally - a silent clip is normal.</li>
- * </ul>
- *
- * <p>Each variant carries its own audio, so the master needs no EXT-X-MEDIA group. Slightly
- * more bytes, substantially better player compatibility.
- */
+/** Builds the single ffmpeg invocation that produces the whole ladder. One process, not one per
+ * rung: the source is decoded once and the frames fanned out to every encoder. */
 @Component
 public class HlsCommandBuilder {
 
@@ -38,9 +21,7 @@ public class HlsCommandBuilder {
         this.properties = properties;
     }
 
-    /**
-     * @param rungs ladder to produce, highest first, already filtered to exclude upscaling
-     */
+    /** @param rungs ladder to produce, highest first, already filtered to exclude upscaling */
     public List<String> build(Path source,
                               MediaMetadata metadata,
                               List<Rendition> rungs,
@@ -53,13 +34,13 @@ public class HlsCommandBuilder {
         List<String> command = new ArrayList<>();
         command.add(properties.ffmpegPath());
 
-        // -y overwrites a previous attempt's files. Safe because each job gets a unique
-        // working directory, and it avoids a stale-segment failure mode.
+        // -y overwrites a previous attempt's files. Safe because each job gets a unique working directory,
+        // and it avoids a stale-segment failure mode.
         command.add("-y");
         command.add("-nostdin");
         command.add("-hide_banner");
-        // "error" normally, so a successful job's log stays readable. Raised to "warning" only
-        // for HDR, where tone mapping emits diagnostics worth having.
+        // "error" normally, so a successful job's log stays readable. Raised to "warning" only for HDR,
+        // where tone mapping emits diagnostics worth having.
         command.add("-loglevel");
         command.add(metadata.isHdr() ? "warning" : "error");
 
@@ -67,8 +48,8 @@ public class HlsCommandBuilder {
         command.add(source.toAbsolutePath().toString());
 
         if (!metadata.hasAudio()) {
-            // A synthetic silent track, so every variant is audio+video and no player has to
-            // special-case a video-only rendition set.
+            // A synthetic silent track, so every variant is audio+video and no player has to special-case a
+            // video-only rendition set.
             command.add("-f");
             command.add("lavfi");
             command.add("-i");
@@ -87,13 +68,7 @@ public class HlsCommandBuilder {
         return List.copyOf(command);
     }
 
-    /**
-     * One split per dimension, a scale+crop per rung, and an asplit when there is audio.
-     *
-     * <p>The transform is always "scale to cover, then centre-crop to 9:16". Cropping to fill is
-     * a product decision - it matches user expectation for shortform and costs nothing - but
-     * landscape and square uploads do lose their edges.
-     */
+    /** One split per dimension, a scale+crop per rung, and an asplit when there is audio. */
     private String buildFilterGraph(MediaMetadata metadata, List<Rendition> rungs) {
         StringJoiner splitOutputs = new StringJoiner("");
         for (int i = 0; i < rungs.size(); i++) {
@@ -106,8 +81,8 @@ public class HlsCommandBuilder {
         for (int i = 0; i < rungs.size(); i++) {
             Rendition rung = rungs.get(i);
             graph.append(";[s").append(i).append(']')
-                    // Frame rate first, so the scale filters only see output-rate frames: a
-                    // 60fps source then costs the same to scale as a 30fps one.
+                    // Frame rate first, so the scale filters only see output-rate frames: a 60fps source then costs
+                    // the same to scale as a 30fps one.
                     .append(formatRate(metadata))
                     .append(tonemapChain(metadata))
                     .append("scale=").append(rung.width()).append(':').append(rung.height())
@@ -141,36 +116,19 @@ public class HlsCommandBuilder {
         return graph.toString();
     }
 
-    /**
-     * Forces a constant output frame rate and caps the source rate.
-     * <p>
-     * Variable frame rate is normal for phone-recorded video. Left alone it produces uneven
-     * GOP lengths, which breaks the aligned-keyframes property that adaptive switching
-     * depends on, and it makes the segment count unpredictable.
-     */
+    /** Forces a constant output frame rate and caps the source rate. */
     private String formatRate(MediaMetadata metadata) {
         double target = properties.outputFps();
         if (metadata.frameRate() > 0 && metadata.frameRate() < target) {
-            // Never manufacture frames. A 24fps source stays 24fps rather than being
-            // duplicated up to 30, which would inflate bitrate for no visible gain.
+            // Never manufacture frames. A 24fps source stays 24fps rather than being duplicated up to 30,
+            // which would inflate bitrate for no visible gain.
             return "fps=" + trim(metadata.frameRate()) + ",";
         }
         return "fps=" + trim(target) + ",";
     }
 
-    /**
-     * HDR sources need an explicit tone map, otherwise a recent iPhone clip lands in the
-     * feed washed out and flat (PQ) or with blown highlights (HLG). Players assume SDR.
-     * <p>
-     * The chain is: linearise with the source transfer, apply a perceptual tone curve,
-     * then re-encode to BT.709 with a limited range. {@code zscale} does the colour
-     * science and {@code tonemap} the curve; both are present in the pinned Alpine ffmpeg
-     * build, and {@link #verifyFilterAvailability} checks at startup rather than letting the
-     * first HDR upload fail in production.
-     * <p>
-     * Applied identically to every rung, before the scale, so all renditions are graded the
-     * same and do not drift in colour when a player switches between them.
-     */
+    /** HDR sources need an explicit tone map, otherwise a recent iPhone clip lands in the feed washed
+     * between them. */
     private String tonemapChain(MediaMetadata metadata) {
         if (!metadata.isHdr()) {
             return "";
@@ -183,10 +141,7 @@ public class HlsCommandBuilder {
                 + "format=yuv420p,";
     }
 
-    /**
-     * Interleaves each video stream with its own audio stream, in rung order. The order here
-     * is what the {@code v:N} / {@code a:N} indices in {@code var_stream_map} refer to.
-     */
+    /** Interleaves each video stream with its own audio stream, in rung order. */
     private void addStreamMaps(List<String> command, MediaMetadata metadata, List<Rendition> rungs) {
         for (int i = 0; i < rungs.size(); i++) {
             command.add("-map");
@@ -194,20 +149,12 @@ public class HlsCommandBuilder {
             command.add("-map");
             command.add("[a" + i + "]");
         }
-        // -shortest stops encoding when the shortest mapped stream ends. Without it a source
-        // whose audio is slightly shorter than its video gets a silent padded tail, and one
-        // whose audio is longer gets a frozen final frame.
+        // -shortest stops encoding when the shortest mapped stream ends.
         command.add("-shortest");
     }
 
-    /**
-     * Per-rung rate control, addressed by output stream index rather than by name.
-     * <p>
-     * The index numbering is global across all mapped video streams, which is why these are
-     * {@code -b:v:0..N} and not per-output options. Getting this wrong is silent: ffmpeg
-     * applies the encoder's own default bitrate to the un-addressed streams and the ladder
-     * comes out with several identical rungs.
-     */
+    /** Per-rung rate control, addressed by output stream index rather than by name. The index numbering
+     * output options. */
     private void addVideoEncoderOptions(List<String> command, List<Rendition> rungs) {
         command.add("-c:v");
         command.add("libx264");
@@ -218,8 +165,8 @@ public class HlsCommandBuilder {
         command.add("-pix_fmt");
         command.add("yuv420p");
 
-        // Constant GOP, no scene-cut keyframes. A keyframe in one rendition but not its
-        // neighbours is what makes a player stall mid-switch.
+        // Constant GOP, no scene-cut keyframes. A keyframe in one rendition but not its neighbours is what
+        // makes a player stall mid-switch.
         command.add("-sc_threshold");
         command.add("0");
 
@@ -230,8 +177,8 @@ public class HlsCommandBuilder {
         command.add("-keyint_min");
         command.add(String.valueOf(gop));
 
-        // Absolute-time keyframes, identical across renditions, so a player can switch at a
-        // segment boundary without waiting for a new keyframe.
+        // Absolute-time keyframes, identical across renditions, so a player can switch at a segment
+        // boundary without waiting for a new keyframe.
         command.add("-force_key_frames");
         command.add("expr:gte(t,n_forced*" + gopSeconds + ")");
 
@@ -253,8 +200,8 @@ public class HlsCommandBuilder {
         command.add(properties.audioBitrate());
         command.add("-ar");
         command.add(String.valueOf(properties.audioSampleRate()));
-        // Stereo, always. A mono source should not produce a track that is silent on one
-        // side, and a 5.1 source should not force a 5.1 ladder.
+        // Stereo, always. A mono source should not produce a track that is silent on one side, and a 5.1
+        // source should not force a 5.1 ladder.
         command.add("-ac");
         command.add(String.valueOf(properties.audioChannels()));
     }
@@ -263,23 +210,22 @@ public class HlsCommandBuilder {
         command.add("-f");
         command.add("hls");
 
-        // VOD, not EVENT. Content here is immutable once produced, and EVENT also re-signs a
-        // growing playlist, which is a live-streaming behaviour.
+        // VOD, not EVENT. Content here is immutable once produced, and EVENT also re-signs a growing
+        // playlist, which is a live-streaming behaviour.
         command.add("-hls_playlist_type");
         command.add("vod");
 
-        // Keep every segment. Required for VOD; otherwise the playlist is a sliding window
-        // that cannot be seeked.
+        // Keep every segment. Required for VOD; otherwise the playlist is a sliding window that cannot be
+        // seeked.
         command.add("-hls_list_size");
         command.add("0");
 
-        // Every segment starts with a keyframe thanks to -force_key_frames, so this tells a
-        // player it can switch without re-decoding.
+        // Every segment starts with a keyframe thanks to -force_key_frames, so this tells a player it can
+        // switch without re-decoding.
         command.add("-hls_flags");
         command.add("independent_segments+temp_file");
 
-        // MPEG-TS over fMP4: broader device support for the same effort, and nothing here
-        // needs CMAF.
+        // MPEG-TS over fMP4: broader device support for the same effort, and nothing here needs CMAF.
         command.add("-hls_segment_type");
         command.add("mpegts");
 
@@ -290,7 +236,7 @@ public class HlsCommandBuilder {
         command.add("-master_pl_name");
         command.add("master.m3u8");
 
-        // The joiner's delimiter and nothing else; an extra one yields "v:0,a:0   v:1,a:1".
+        // The joiner's delimiter and nothing else; an extra one yields "v:0,a:0 v:1,a:1".
         StringJoiner map = new StringJoiner(" ");
         for (int i = 0; i < rungs.size(); i++) {
             map.add("v:" + i + ",a:" + i);

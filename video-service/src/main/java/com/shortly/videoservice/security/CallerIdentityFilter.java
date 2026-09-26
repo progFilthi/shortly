@@ -17,17 +17,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 
-/**
- * Rejects requests that did not come through the gateway, and publishes the caller's identity.
- *
- * <p>Controllers receive the identity through {@link CallerIdentityArgumentResolver}, so no
- * controller reads {@code X-User-Id} itself. That is the point: the header is only trustworthy
- * because this filter verified the gateway secret first, and routing every read through one place
- * makes the check very hard to bypass by accident.
- *
- * <p>Without the secret check, any caller that can reach this port directly sets the header to
- * whoever they like, and every ownership check in the service becomes theatre.
- */
+/** Rejects requests that did not come through the gateway, and publishes the caller's identity. */
 @Component
 @Order(1)
 public class CallerIdentityFilter extends OncePerRequestFilter {
@@ -44,14 +34,7 @@ public class CallerIdentityFilter extends OncePerRequestFilter {
         this.requireGatewaySecret = requireGatewaySecret;
     }
 
-    /**
-     * Actuator is exempt.
-     * <p>
-     * The container health check runs inside the container and has no way to present the gateway
-     * secret, so applying the check to actuator would make every service report unhealthy and be
-     * restarted forever. In production actuator would sit on a separate management port with its
-     * own network policy; exempting it here keeps the local stack honest.
-     */
+    /** Actuator is exempt. */
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         return request.getRequestURI().startsWith("/actuator");
@@ -80,13 +63,7 @@ public class CallerIdentityFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    /**
-     * Constant-time comparison.
-     * <p>
-     * {@code String.equals} short-circuits on the first differing byte, which lets an attacker
-     * recover the secret one character at a time by timing rejections.
-     * {@link MessageDigest#isEqual} does not, and on a short value the cost is irrelevant.
-     */
+    /** Constant-time comparison. */
     private static boolean secretsMatch(String presented, String expected) {
         if (presented == null || expected == null || expected.isBlank()) {
             return false;
@@ -96,10 +73,8 @@ public class CallerIdentityFilter extends OncePerRequestFilter {
                 expected.getBytes(StandardCharsets.UTF_8));
     }
 
-    /**
-     * Hand-written, because this filter runs before {@code @RestControllerAdvice} and so has no
-     * handler to format the response.
-     */
+    /** Hand-written, because this filter runs before {@code @RestControllerAdvice} and so has no
+     * handler to format the response. */
     private static void writeForbidden(HttpServletResponse response) throws IOException {
         response.setStatus(HttpStatus.FORBIDDEN.value());
         response.setContentType("application/problem+json");

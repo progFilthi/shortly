@@ -22,11 +22,7 @@
     </properties>
 
     <dependencies>
-        <!--
-            Intentionally no Spring, no Jackson, no AMQP, no AWS.
-            Adding any of these would turn a contract module into a coupling vector.
-            Records and plain enums only.
-        -->
+        <!-- Intentionally no Spring, no Jackson, no AMQP, no AWS. Adding any of these would turn a contract module into a coupling vector. Records and plain enums only. -->
     </dependencies>
 
 </project>

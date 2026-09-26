@@ -12,22 +12,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.Instant;
 
-/**
- * Records sign-in attempts.
- *
- * <p>A separate bean for one reason: the failure counter must survive the exception that
- * accompanies it.
- *
- * <p>{@code AuthService#login} runs in a transaction and throws {@code InvalidCredentials} or
- * {@code AccountLocked} on failure. Rolling that transaction back also rolls back the counter
- * increment, so the count never climbs and the lockout never fires - brute-force protection
- * that looks implemented and is not. Recording the attempt in {@code REQUIRES_NEW} commits it
- * independently of the failure the caller is about to see.
- *
- * <p>A separate class rather than a private method on {@code AuthService}, because Spring's
- * transaction proxy is not applied to self-invocation: a {@code REQUIRES_NEW} method called from
- * inside its own class would quietly run in the caller's transaction.
- */
+/** Records sign-in attempts. A separate class rather than a private method on {@code AuthService},
+ * method called from inside its own class would quietly run in the caller's transaction. */
 @Service
 public class LoginAttemptService {
 
@@ -45,15 +31,11 @@ public class LoginAttemptService {
         this.clock = clock;
     }
 
-    /**
-     * Increments the failure count and locks the account once it reaches the threshold.
-     *
-     * @return true if this attempt tripped the lockout
-     */
+    /** Increments the failure count and locks the account once it reaches the threshold. */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public boolean recordFailure(String userId) {
-        // Reloaded in this transaction rather than reusing the caller's managed instance, whose
-        // state the outer rollback is about to discard.
+        // Reloaded in this transaction rather than reusing the caller's managed instance, whose state the
+        // outer rollback is about to discard.
         return userRepository.findById(userId).map(user -> {
             Instant now = clock.instant();
             user.recordFailedLogin(properties.maxFailedAttempts(), properties.lockoutDuration(), now);
@@ -68,12 +50,8 @@ public class LoginAttemptService {
         }).orElse(false);
     }
 
-    /**
-     * Clears the counter after a successful sign-in.
-     * <p>
-     * Also {@code REQUIRES_NEW}, for symmetry and for the same reason: the caller's transaction
-     * must not be the thing that decides whether a lockout sticks.
-     */
+    /** Clears the counter after a successful sign-in. Also {@code REQUIRES_NEW}, for symmetry and for
+     * sticks. */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void recordSuccess(String userId) {
         userRepository.findById(userId).ifPresent(user -> {

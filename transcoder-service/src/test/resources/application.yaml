@@ -1,8 +1,4 @@
 # Test-only overrides.
-#
-# The application context is loadable without a broker or a bucket, so a plain context-load
-# smoke test does not need infrastructure. The listener container is not started, and AWS
-# credentials are obviously fake.
 spring:
   rabbitmq:
     host: localhost
@@ -21,9 +17,7 @@ aws:
     secret-key: test
 
 transcoder:
-  # This test asserts the bean graph, not the media toolchain. The host's ffmpeg may differ
-  # from the pinned image's (a macOS Homebrew build has no zscale, for example), and failing the
-  # context load over that would make the test measure the wrong thing.
+  # This test asserts the bean graph, not the media toolchain.
   verify-media-toolchain: false
   storage:
     bucket-name: test-bucket

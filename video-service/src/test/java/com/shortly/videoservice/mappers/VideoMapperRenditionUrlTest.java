@@ -9,11 +9,8 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * Per-rendition playlist URLs are derived from the manifest URL rather than stored, so the two
- * cannot drift apart. That makes the derivation itself the thing worth testing - a bad slice
- * index here produces URLs that 404 for every client, with no error anywhere in our logs.
- */
+/** Per-rendition playlist URLs are derived from the manifest URL rather than stored, so the two
+ * cannot drift apart. */
 class VideoMapperRenditionUrlTest {
 
     private static final UUID VIDEO_ID = UUID.randomUUID();
@@ -52,8 +49,8 @@ class VideoMapperRenditionUrlTest {
 
     @Test
     void returnsNothingBeforeTheLadderExists() {
-        // A video still in UPLOADING or PROCESSING has no manifest, so there is nothing to
-        // derive. Returning placeholder URLs would be worse than returning none.
+        // A video still in UPLOADING or PROCESSING has no manifest, so there is nothing to derive.
+        // Returning placeholder URLs would be worse than returning none.
         Video uploading = new Video();
         uploading.setHlsManifestUrl(null);
         uploading.setVideoUrl(null);
@@ -70,8 +67,8 @@ class VideoMapperRenditionUrlTest {
 
     @Test
     void fallsBackToTheLegacyVideoUrlWhenNoManifestIsRecorded() {
-        // A ladder produced by a build that did not yet record hlsManifestUrl. Falling back
-        // keeps those videos playable instead of returning an empty ladder forever.
+        // A ladder produced by a build that did not yet record hlsManifestUrl. Falling back keeps those
+        // videos playable instead of returning an empty ladder forever.
         Video video = new Video();
         video.setHlsManifestUrl(null);
         video.setVideoUrl(MANIFEST);

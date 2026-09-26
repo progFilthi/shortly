@@ -25,23 +25,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/**
- * Guards the shape that quietly made reuse detection a no-op.
- *
- * <p>Revoking the family and then throwing rolls the revocation back with the surrounding
- * transaction, so it has to commit independently - which needs {@code REQUIRES_NEW}, which in
- * turn only takes effect through a Spring proxy, which means it cannot be a self-invocation
- * inside {@link RefreshTokenService}.
- *
- * <p>Behaviour is covered in {@link RefreshTokenServiceTest}; this class covers the wiring
- * that behaviour silently depends on.
- *
- * <p><b>What these tests cannot prove.</b> A mocked repository has no transaction, so nothing
- * here can demonstrate that the revocation survives the rollback. Only a real database can,
- * which is why {@code scripts/e2e-auth-test.sh} and the iOS {@code LiveBackendTests} assert it
- * end to end. What is asserted here is that the structure they rely on stays put, so the
- * failure cannot return quietly.
- */
+/** Guards the shape that quietly made reuse detection a no-op. Revoking the family and then
+ * Spring proxy, which means it cannot be a self-invocation inside {@link RefreshTokenService}. */
 class RefreshTokenRevocationTest {
 
     private RefreshTokenRepository repository;
@@ -73,12 +58,8 @@ class RefreshTokenRevocationTest {
                 .isEqualTo(Propagation.REQUIRES_NEW);
     }
 
-    /**
-     * The original defect, as one assertion. {@code REQUIRES_NEW} sat on a method of
-     * {@code RefreshTokenService} that called itself, so the proxy was bypassed, the
-     * annotation meant nothing, and the update joined the transaction that then rolled it
-     * back. Reintroducing that shape is the regression worth catching.
-     */
+    /** The original defect, as one assertion. {@code REQUIRES_NEW} sat on a method of {@code
+     * nothing, and the update joined the transaction that then rolled it back. */
     @Test
     void rotationServiceDoesNotDeclareItsOwnRequiresNewRevocation() {
         boolean declaresRequiresNew = Arrays
@@ -104,8 +85,8 @@ class RefreshTokenRevocationTest {
         assertThatThrownBy(() -> service.rotate("a-token", "agent", "127.0.0.1"))
                 .isInstanceOf(RefreshTokenInvalidException.class);
 
-        // Routed through RefreshTokenRevocationService, which is the only place a
-        // REQUIRES_NEW revocation can actually take effect.
+        // Routed through RefreshTokenRevocationService, which is the only place a REQUIRES_NEW revocation
+        // can actually take effect.
         verify(repository).revokeActiveInFamily(any(UUID.class), any());
     }
 

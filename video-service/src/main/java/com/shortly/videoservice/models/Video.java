@@ -26,20 +26,13 @@ public class Video implements Persistable<UUID> {
     @Column(nullable = false, length = 200)
     private String title;
 
-    /**
-     * Was a bare {@code String}, which Hibernate mapped to {@code varchar(255)} and silently
-     * truncated longer descriptions. Sized explicitly, and migrated in V2.
-     */
+    /** Was a bare {@code String}, which Hibernate mapped to {@code varchar(255)} and silently truncated
+     * longer descriptions. */
     @Column(length = 2000)
     private String description;
 
-    /**
-     * Playback URL, pointing at {@code master.m3u8} once the ladder exists.
-     * <p>
-     * Not populated at upload-completion time any more: before the transcoder was wired up this
-     * held the raw object's CDN URL, so clients received a playable-looking URL for a file that
-     * had never been transcoded or even verified to exist.
-     */
+    /** Playback URL, pointing at {@code master.m3u8} once the ladder exists. Not populated at upload-
+     * verified to exist. */
     @Column(length = 1024)
     private String videoUrl;
 
@@ -67,16 +60,10 @@ public class Video implements Persistable<UUID> {
     @Column(length = 1024)
     private String thumbnailSpriteUrl;
 
-    /**
-     * Cover frame chosen by the user, as a tile index into the sprite sheet. Null until the
-     * user picks one, in which case clients fall back to {@link #posterUrl}.
-     */
+    /** Cover frame chosen by the user, as a tile index into the sprite sheet. */
     private Integer thumbnailTileIndex;
 
-    /**
-     * The adaptive ladder, as published by the transcoder. Stored as JSON because it is only
-     * ever read as a whole; see {@link RenditionListConverter} for why this is not a table.
-     */
+    /** The adaptive ladder, as published by the transcoder. */
     @Convert(converter = RenditionListConverter.class)
     @Column(columnDefinition = "text")
     private List<RenditionInfo> renditions;
@@ -92,10 +79,7 @@ public class Video implements Persistable<UUID> {
     @Column(length = 128)
     private String sourceContentType;
 
-    /**
-     * Why the video failed, as a {@code TranscodeFailureReason} name. Client-facing: it tells
-     * the app which limit was hit rather than just "something went wrong".
-     */
+    /** Why the video failed, as a {@code TranscodeFailureReason} name. */
     @Column(length = 64)
     private String failureReason;
 

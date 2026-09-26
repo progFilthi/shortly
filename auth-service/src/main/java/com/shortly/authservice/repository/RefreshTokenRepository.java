@@ -14,14 +14,8 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, UUID
 
     Optional<RefreshToken> findByTokenHash(String tokenHash);
 
-    /**
-     * Revokes every live token in a family.
-     * <p>
-     * A bulk update rather than a load-and-iterate: reuse detection can hit a family with many
-     * rows, and each of those rows would otherwise be a separate round trip inside a request.
-     * The {@code consumedAt IS NULL AND revokedAt IS NULL} predicate is what makes repeated calls
-     * idempotent, so revoking an already-revoked family touches nothing.
-     */
+    /** Revokes every live token in a family. A bulk update rather than a load-and-iterate: reuse
+     * round trip inside a request. */
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""
             update RefreshToken t
@@ -43,10 +37,7 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, UUID
             """)
     int revokeActiveForUser(@Param("userId") String userId, @Param("when") Instant when);
 
-    /**
-     * Housekeeping. Deletes anything already expired, whether or not it was consumed or revoked -
-     * those rows have no remaining use once the expiry has passed.
-     */
+    /** Housekeeping. */
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("delete from RefreshToken t where t.expiresAt < :cutoff")
     int deleteExpiredBefore(@Param("cutoff") Instant cutoff);

@@ -19,20 +19,8 @@ import java.util.HexFormat;
 import java.util.Optional;
 import java.util.UUID;
 
-/**
- * Issues, rotates, and revokes refresh tokens.
- *
- * <p><b>Why opaque rather than JWT.</b> A JWT refresh token cannot be revoked without a
- * server-side denylist, and a denylist that has to be consulted on every refresh is exactly the
- * database this design was trying to avoid. Opaque random tokens are looked up by hash, so
- * revocation is a column update and detection is a query.
- *
- * <p><b>Rotation and reuse detection.</b> Every refresh consumes the presented token and issues
- * a new one. If a token that was already consumed is presented again, that means two parties hold
- * it: the legitimate client and whoever copied it. There is no way to tell which is which, so the
- * safe response is to revoke the entire token family and force a fresh sign-in. The alternative,
- * allowing the replay, means a stolen token is valid forever.
- */
+/** Issues, rotates, and revokes refresh tokens. Why opaque rather than JWT. A JWT refresh token
+ * every refresh is exactly the database this design was trying to avoid. */
 @Service
 public class RefreshTokenService {
 
@@ -46,13 +34,7 @@ public class RefreshTokenService {
     private final AuthProperties properties;
     private final Clock clock;
 
-    /**
-     * Single constructor, taking the injected {@link Clock}.
-     *
-     * <p>One constructor on purpose. With two and no {@code @Autowired}, Spring looks for a
-     * no-arg one and fails at startup; the test passes its own clock instead of needing an
-     * overload.
-     */
+    /** Single constructor, taking the injected {@link Clock}. */
     public RefreshTokenService(RefreshTokenRepository repository,
                                RefreshTokenRevocationService revocation,
                                AuthProperties properties,
@@ -63,17 +45,11 @@ public class RefreshTokenService {
         this.clock = clock;
     }
 
-    /**
-     * The token string to hand the client. Returned once and never stored.
-     */
+    /** The token string to hand the client. */
     public record IssuedToken(String token, RefreshToken record) {
     }
 
-    /**
-     * Issues a token in a new family - the root of a session.
-     *
-     * @param familyId reuse an existing id to continue a session; null starts a fresh one
-     */
+    /** Issues a token in a new family - the root of a session. */
     @Transactional
     public IssuedToken issue(String userId, UUID familyId, String userAgent, String ipAddress) {
         String secret = generateSecret();
@@ -94,20 +70,15 @@ public class RefreshTokenService {
         return new IssuedToken(secret, repository.save(token));
     }
 
-    /**
-     * Consumes a presented token and issues its replacement.
-     *
-     * @throws com.shortly.authservice.exceptions.RefreshTokenInvalidException if the token is
-     *         unknown, expired, already consumed beyond the grace window, or revoked
-     */
+    /** Consumes a presented token and issues its replacement. */
     @Transactional
     public IssuedToken rotate(String presentedToken, String userAgent, String ipAddress) {
         String hash = hash(presentedToken);
         Optional<RefreshToken> found = repository.findByTokenHash(hash);
 
         if (found.isEmpty()) {
-            // Either forged or already garbage-collected. Nothing to revoke, because a family
-            // cannot be identified from a token we have never seen.
+            // Either forged or already garbage-collected. Nothing to revoke, because a family cannot be
+            // identified from a token we have never seen.
             throw new com.shortly.authservice.exceptions.RefreshTokenInvalidException();
         }
 
@@ -115,8 +86,8 @@ public class RefreshTokenService {
         Instant now = clock.instant();
 
         if (token.isRevoked()) {
-            // A revoked token being presented is either a replay after logout, or an attacker
-            // using a token the legitimate client already burned. Revoke the family either way.
+            // A revoked token being presented is either a replay after logout, or an attacker using a token
+            // the legitimate client already burned. Revoke the family either way.
             log.warn("Revoked refresh token presented for user {}; revoking family {}",
                     token.getUserId(), token.getFamilyId());
             revocation.revokeFamily(token.getFamilyId(), now);
@@ -125,9 +96,7 @@ public class RefreshTokenService {
 
         if (token.isConsumed()) {
             if (withinGraceWindow(token, now)) {
-                // Almost certainly a client retry after a lost response. Re-issuing a *new*
-                // token here would burn the caller's only copy again, so this is deliberately
-                // a no-op: the caller keeps using whatever the previous response delivered.
+                // Almost certainly a client retry after a lost response.
                 log.debug("Replayed refresh token for user {} inside the grace window; "
                         + "tolerating", token.getUserId());
                 throw new com.shortly.authservice.exceptions.RefreshTokenInvalidException(
@@ -151,30 +120,17 @@ public class RefreshTokenService {
         return issue(token.getUserId(), token.getFamilyId(), userAgent, ipAddress);
     }
 
-    /**
-     * Revokes every live token in a family. Used by logout and by reuse detection.
-     *
-     * <p>Delegates to {@link RefreshTokenRevocationService} rather than doing the work here.
-     * An earlier version carried {@code REQUIRES_NEW} on a method of this class and was called
-     * from {@link #rotate} - a self-invocation, so the annotation was silently inert, the
-     * update joined the surrounding transaction, and the throw that followed rolled the
-     * revocation back. Reuse was detected and the family was left alive.
-     */
+    /** Revokes every live token in a family. */
     public int revokeFamily(UUID familyId) {
         return revocation.revokeFamily(familyId, clock.instant());
     }
 
-    /**
-     * Revokes every live token for a user across all families - "log out everywhere".
-     */
+    /** Revokes every live token for a user across all families - "log out everywhere". */
     public int revokeAllForUser(String userId) {
         return revocation.revokeAllForUser(userId, clock.instant());
     }
 
-    /**
-     * Housekeeping. Expired and long-revoked rows are dead weight and would otherwise grow
-     * without bound, since nothing deletes them.
-     */
+    /** Housekeeping. */
     @Transactional
     public int purgeExpired() {
         return repository.deleteExpiredBefore(clock.instant());
@@ -194,13 +150,8 @@ public class RefreshTokenService {
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 
-    /**
-     * SHA-256 of the token, stored instead of the token itself.
-     * <p>
-     * A database leak must not hand the attacker working refresh tokens. SHA-256 rather than
-     * bcrypt is correct here because the input is 256 bits of CSPRNG output: there is no
-     * dictionary to attack, so a deliberately slow hash would only add latency.
-     */
+    /** SHA-256 of the token, stored instead of the token itself. A database leak must not hand the
+     * attacker working refresh tokens. */
     static String hash(String token) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");

@@ -17,23 +17,14 @@ import java.util.List;
 import static com.shortly.transcoderservice.transcode.TranscodeFixtures.withWorkDir;
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * Runs the real command the pipeline would build, against the real ffmpeg, and inspects the
- * real output tree.
- * <p>
- * Unit tests on the command string cannot catch a filter that ffmpeg rejects, a variant map
- * it mis-parses, or a muxer option that changed meaning. This does, and it is the only test
- * that would have caught the "Same elementary stream found more than once" failure.
- * <p>
- * Skipped automatically when ffmpeg or ffprobe is not on PATH, so it does not break a build
- * on a machine without a media toolchain.
- */
+/** Runs the real command the pipeline would build, against the real ffmpeg, and inspects the real
+ * variant map it mis-parses, or a muxer option that changed meaning. */
 class HlsCommandBuilderIT {
 
     @BeforeAll
     static void requireMediaToolchain() {
-        // Skipped, not failed, when ffmpeg/ffprobe is absent: these tests exercise a binary
-        // contract, so there is nothing meaningful to assert without the binary.
+        // Skipped, not failed, when ffmpeg/ffprobe is absent: these tests exercise a binary contract, so
+        // there is nothing meaningful to assert without the binary.
         Assumptions.assumeTrue(onPath("ffmpeg"), "ffmpeg not on PATH; skipping integration test");
         Assumptions.assumeTrue(onPath("ffprobe"), "ffprobe not on PATH; skipping integration test");
     }
@@ -128,8 +119,8 @@ class HlsCommandBuilderIT {
 
     @Test
     void producesPlayableLadderForSilentVideo(@TempDir Path dir) throws Exception {
-        // The regression guard for the case that aborts the whole filtergraph if the audio
-        // branch is built unconditionally.
+        // The regression guard for the case that aborts the whole filtergraph if the audio branch is built
+        // unconditionally.
         Path source = syntheticSource(dir, "silent.mp4", 1080, 1920, false);
         assertThat(Files.exists(source)).isTrue();
 

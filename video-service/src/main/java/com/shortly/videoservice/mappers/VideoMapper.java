@@ -13,13 +13,8 @@ public interface VideoMapper {
 
     VideoResponse toResponse(Video video);
 
-    /**
-     * Builds the per-rendition media playlist URLs.
-     * <p>
-     * Derived from the manifest URL rather than stored, so the two can never drift apart. The
-     * manifest always ends in {@code /master.m3u8} and a variant always sits beside it as
-     * {@code /<rung>/index.m3u8}, both of which this service controls.
-     */
+    /** Builds the per-rendition media playlist URLs. Derived from the manifest URL rather than stored,
+     * so the two can never drift apart. */
     static List<VideoResponse.RenditionResponse> toRenditionResponses(Video video) {
         if (video.getRenditions() == null || video.getRenditions().isEmpty()) {
             return List.of();

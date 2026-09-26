@@ -8,11 +8,8 @@ import org.springframework.mock.web.MockHttpServletResponse;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * The gateway-secret check is the whole reason a service behind the gateway can trust
- * {@code X-User-Id}. These tests cover it directly, since the controller slice tests deliberately
- * run with it disabled.
- */
+/** The gateway-secret check is the whole reason a service behind the gateway can trust {@code
+ * X-User-Id}. */
 class CallerIdentityFilterTest {
 
     private static final String SECRET = "s3cr3t-gateway-value";
@@ -75,8 +72,8 @@ class CallerIdentityFilterTest {
 
     @Test
     void publishesNoIdentityWhenTheGatewaySentNoUserHeader() throws Exception {
-        // A public read with a valid secret but no subject. The attribute is simply absent, and
-        // the argument resolver reports that as a routing error if a handler actually needed one.
+        // A public read with a valid secret but no subject. The attribute is simply absent, and the
+        // argument resolver reports that as a routing error if a handler actually needed one.
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/videos/abc");
         request.addHeader(InternalHeaders.GATEWAY_SECRET, SECRET);
         MockHttpServletResponse response = new MockHttpServletResponse();
@@ -89,8 +86,8 @@ class CallerIdentityFilterTest {
 
     @Test
     void rejectsEverythingWhenNoSecretIsConfigured() throws Exception {
-        // Fail closed. A service started without its secret would otherwise accept unsigned
-        // requests, which is the exact hole the check exists to close.
+        // Fail closed. A service started without its secret would otherwise accept unsigned requests,
+        // which is the exact hole the check exists to close.
         MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/v1/videos");
         request.addHeader(InternalHeaders.GATEWAY_SECRET, "");
         MockHttpServletResponse response = new MockHttpServletResponse();
@@ -113,8 +110,8 @@ class CallerIdentityFilterTest {
 
     @Test
     void theCheckCanBeDisabledForLocalDevelopmentOnly() throws Exception {
-        // Documented escape hatch. It exists so a developer can run one service standalone, and it
-        // is off by default everywhere else.
+        // Documented escape hatch. It exists so a developer can run one service standalone, and it is off
+        // by default everywhere else.
         MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/v1/videos");
         request.addHeader(InternalHeaders.USER_ID, "user-1");
         MockHttpServletResponse response = new MockHttpServletResponse();

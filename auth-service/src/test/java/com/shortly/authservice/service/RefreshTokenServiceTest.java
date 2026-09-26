@@ -20,14 +20,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-/**
- * Refresh-token rotation and reuse detection.
- *
- * <p>Rotation is the mechanism that makes a stolen refresh token detectable. The rules under
- * test: a token is consumed on use, a replacement is issued in the same family, a replay inside a
- * short grace window is tolerated (mobile retries), and a replay outside it revokes the whole
- * family (someone else holds a copy).
- */
+/** Refresh-token rotation and reuse detection. */
 class RefreshTokenServiceTest {
 
     private RefreshTokenRepository repository;
@@ -146,8 +139,8 @@ class RefreshTokenServiceTest {
 
     @Test
     void anUnknownTokenIsRejectedWithoutRevokingAnything() {
-        // A forged token identifies no family, so there is nothing to revoke. Revoking on an
-        // unknown token would let an attacker destroy arbitrary sessions by guessing.
+        // A forged token identifies no family, so there is nothing to revoke. Revoking on an unknown token
+        // would let an attacker destroy arbitrary sessions by guessing.
         assertThatThrownBy(() -> service.rotate("never-issued", "agent", "127.0.0.1"))
                 .isInstanceOf(RefreshTokenInvalidException.class);
 
@@ -169,8 +162,8 @@ class RefreshTokenServiceTest {
 
     @Test
     void aReplayInsideTheGraceWindowIsTolerated() {
-        // Mobile clients retry after a lost response. Without this, the caller loses the only
-        // copy of its token and the user appears logged out at random.
+        // Mobile clients retry after a lost response. Without this, the caller loses the only copy of its
+        // token and the user appears logged out at random.
         var original = service.issue("user-1", null, "agent", "127.0.0.1");
         var rotated = service.rotate(original.token(), "agent", "127.0.0.1");
 
@@ -185,8 +178,8 @@ class RefreshTokenServiceTest {
 
     @Test
     void aReplayOutsideTheGraceWindowRevokesTheWholeFamily() {
-        // Two parties now hold the token: the real client and whoever copied it. There is no way
-        // to tell which is which, so the only safe move is to end the session for both.
+        // Two parties now hold the token: the real client and whoever copied it. There is no way to tell
+        // which is which, so the only safe move is to end the session for both.
         var original = service.issue("user-1", null, "agent", "127.0.0.1");
         var rotated = service.rotate(original.token(), "agent", "127.0.0.1");
 
@@ -203,8 +196,8 @@ class RefreshTokenServiceTest {
 
     @Test
     void reuseDetectionDoesNotReachIntoOtherSessions() {
-        // A family is a single sign-in. Revoking every session on any one replay would let an
-        // attacker who can obtain a single token log the user out everywhere.
+        // A family is a single sign-in. Revoking every session on any one replay would let an attacker who
+        // can obtain a single token log the user out everywhere.
         var sessionOne = service.issue("user-1", null, "agent", "127.0.0.1");
         var rotatedOne = service.rotate(sessionOne.token(), "agent", "127.0.0.1");
         var sessionTwo = service.issue("user-1", null, "phone", "127.0.0.2");
@@ -262,8 +255,8 @@ class RefreshTokenServiceTest {
 
     @Test
     void revokingTwiceIsANoOp() {
-        // Logout has to be idempotent: a client that lost the response retries, and a second
-        // revocation must not be an error or report a different count.
+        // Logout has to be idempotent: a client that lost the response retries, and a second revocation
+        // must not be an error or report a different count.
         service.issue("user-1", null, "agent", "127.0.0.1");
         var family = byHash.values().iterator().next().getFamilyId();
 

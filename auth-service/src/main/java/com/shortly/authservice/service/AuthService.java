@@ -35,14 +35,8 @@ public class AuthService {
     private final LoginAttemptService loginAttempts;
     private final Clock clock;
 
-    /**
-     * Single constructor, taking the injected {@link Clock}.
-     *
-     * <p>Deliberately not a convenience overload plus a test overload: two constructors and no
-     * {@code @Autowired} leaves Spring looking for a no-arg one, and marking one of them
-     * {@code @Autowired} is easy to get wrong when both look plausible. One constructor taking
-     * the clock as a bean is unambiguous, and the test passes its own clock.
-     */
+    /** Single constructor, taking the injected {@link Clock}. Deliberately not a convenience overload
+     * plausible. */
     public AuthService(UserRepository userRepository,
                        RefreshTokenRepository refreshTokenRepository,
                        PasswordEncoder passwordEncoder,
@@ -69,9 +63,8 @@ public class AuthService {
     public AuthResponse register(RegisterRequest request, String userAgent, String ipAddress) {
         validatePasswordLength(request.password());
 
-        // Pre-check for a clear error message, but it is not the guard. Two concurrent
-        // registrations of the same email can both pass it; the unique constraint is what
-        // actually prevents a duplicate, and the handler below translates its violation.
+        // Pre-check for a clear error message, but it is not the guard. Two concurrent registrations of
+        // the same email can both pass it;
         if (userRepository.existsByEmailIgnoreCase(request.email())
                 || userRepository.existsByUsernameIgnoreCase(request.username())) {
             throw new CredentialsTakenException();
@@ -87,8 +80,8 @@ public class AuthService {
             log.info("Registered user {} ({})", saved.getUsername(), saved.getId());
             return issueSession(saved, userAgent, ipAddress);
         } catch (DataIntegrityViolationException e) {
-            // Lost the race. Reported identically to the pre-check so a client cannot use the
-            // two paths to distinguish "taken a moment ago" from "taken long ago".
+            // Lost the race. Reported identically to the pre-check so a client cannot use the two paths to
+            // distinguish "taken a moment ago" from "taken long ago".
             throw new CredentialsTakenException();
         }
     }
@@ -101,11 +94,8 @@ public class AuthService {
 
         Optional<User> found = resolveIdentifier(request.identifier());
 
-        /*
-         * Hash a throwaway value when the account does not exist, so the response takes the
-         * same time whether or not the identifier is registered. Without this, "no such user"
-         * returns measurably faster than "wrong password" and the endpoint enumerates accounts.
-         */
+        /** Hash a throwaway value when the account does not exist, so the response takes the same time
+         * whether or not the identifier is registered. */
         if (found.isEmpty()) {
             passwordEncoder.encode(request.password());
             throw new InvalidCredentialsException();
@@ -119,9 +109,7 @@ public class AuthService {
         }
 
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
-            // Recorded in its own transaction. This method then throws, and a rollback here would
-            // discard the increment - leaving the counter permanently at zero and the lockout
-            // permanently inert.
+            // Recorded in its own transaction. This method then throws
             if (loginAttempts.recordFailure(user.getId())) {
                 throw new AccountLockedException(properties.lockoutDuration().toSeconds());
             }
@@ -134,14 +122,7 @@ public class AuthService {
         return issueSession(user, userAgent, ipAddress);
     }
 
-    /**
-     * Finds the account behind a username-or-email identifier.
-     * <p>
-     * Both lookups always run, so the work done is the same regardless of which one hits. The
-     * first match wins, and a username equal to some other account's email is not a case worth
-     * resolving: the unique constraints are per column, so such a pair is simply unusable and
-     * the user is told the credentials were not accepted.
-     */
+    /** Finds the account behind a username-or-email identifier. */
     private Optional<User> resolveIdentifier(String identifier) {
         if (identifier == null || identifier.isBlank()) {
             return Optional.empty();
@@ -154,13 +135,7 @@ public class AuthService {
 
     /* ---------------------------------- refresh ---------------------------------- */
 
-    /**
-     * Exchanges a refresh token for a new pair.
-     * <p>
-     * Issues a fresh access token every time, and a fresh refresh token via
-     * {@link RefreshTokenService#rotate}. An unchanged refresh token would mean a leaked one
-     * stays valid for its full lifetime with no signal that it leaked.
-     */
+    /** Exchanges a refresh token for a new pair. */
     @Transactional
     public AuthResponse refresh(RefreshRequest request, String userAgent, String ipAddress) {
         RefreshTokenService.IssuedToken issued =
@@ -180,14 +155,8 @@ public class AuthService {
 
     /* ---------------------------------- logout ----------------------------------- */
 
-    /**
-     * Ends one session, or all of them.
-     * <p>
-     * Idempotent by design: a client that has lost its response retries, and signing out twice
-     * must not be an error. A presented token that cannot be resolved still yields success,
-     * because from the caller's perspective their session is gone either way - and returning
-     * 401 here would tell an attacker whether a token they are holding was ever valid.
-     */
+    /** Ends one session, or all of them. Idempotent by design: a client that has lost its response
+     * retries, and signing out twice must not be an error. */
     @Transactional
     public void logout(LogoutRequest request, String userAgent, String ipAddress) {
         String hash = RefreshTokenService.hash(request.refreshToken());
@@ -231,10 +200,8 @@ public class AuthService {
                 clock.instant());
     }
 
-    /**
-     * Enforces the configured minimum length, which cannot be expressed as a bean constraint
-     * because the threshold is configuration rather than a constant.
-     */
+    /** Enforces the configured minimum length, which cannot be expressed as a bean constraint because
+     * the threshold is configuration rather than a constant. */
     private void validatePasswordLength(String password) {
         if (password != null && password.length() < properties.minPasswordLength()) {
             throw new PasswordTooWeakException(properties.minPasswordLength());

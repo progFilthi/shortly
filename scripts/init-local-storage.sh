@@ -1,6 +1,4 @@
-#!/bin/sh
-# Idempotent local object-storage bootstrap: creates the upload bucket and applies the CORS rule
-# the presigned browser PUT needs. Needs the AWS CLI; LocalStack is not a Compose service.
+# !/bin/sh Idempotent local object-storage bootstrap:
 
 set -eu
 

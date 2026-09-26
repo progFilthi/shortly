@@ -91,8 +91,8 @@ public class S3StorageServiceImpl implements S3StorageService {
                     .build());
             log.info("Deleted rejected upload at {}", s3Key);
         } catch (RuntimeException e) {
-            // Non-fatal: an orphaned oversized object costs storage but breaks nothing, and a
-            // lifecycle rule on the raw/ prefix is the durable backstop.
+            // Non-fatal: an orphaned oversized object costs storage but breaks nothing, and a lifecycle rule
+            // on the raw/ prefix is the durable backstop.
             log.warn("Could not delete rejected upload at {}; a lifecycle rule will collect it", s3Key, e);
         }
     }

@@ -1,10 +1,9 @@
-# Infrastructure only; the application services run on the host from the IDE.
-# Ports are published so a host-run service can reach them at localhost.
+# Infrastructure plus the transcoder. The gateway, auth, and video services run on the host from
+# the IDE; only the transcoder stays here, because it needs the ffmpeg build in its Dockerfile.
 
 services:
-  # =========================================================================
+  # ==========================================================================
   # POSTGRESQL (Databases per Service)
-  # =========================================================================
   postgres:
     image: postgres:18-alpine
     container_name: shortly-postgres
@@ -24,12 +23,11 @@ services:
       timeout: 5s
       retries: 5
 
-  # =========================================================================
+  # ==========================================================================
   # REDIS (Caching & Feed Caching)
-  # =========================================================================
   redis:
-    # Pinned. `latest` means a Redis major upgrade can arrive on a redeploy, and a cache
-    # protocol or persistence change across versions is a production incident nobody signed up for.
+    # Pinned. `latest` means a Redis major upgrade can arrive on a redeploy, and a cache protocol or
+    # persistence change across versions is a production incident nobody signed up for.
     image: redis:8-alpine
     container_name: shortly-redis
     restart: always
@@ -43,13 +41,10 @@ services:
       timeout: 5s
       retries: 5
 
-  # =========================================================================
+  # ==========================================================================
   # RABBITMQ (Async Messaging & Event Broker)
-  # =========================================================================
   rabbitmq:
-    # Pinned for the same reason as Redis. An unpinned broker upgrade can change queue
-    # semantics (classic vs quorum defaults have moved before) and silently alter delivery
-    # guarantees the transcoder depends on.
+    # Pinned for the same reason as
     image: rabbitmq:4.1-management-alpine
     container_name: shortly-rabbitmq
     restart: always
@@ -67,6 +62,48 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+
+  # ==========================================================================
+  # TRANSCRIBER (FFmpeg worker)
+  transcoder:
+    build:
+      context: ./transcoder-service
+    container_name: shortly-transcoder
+    restart: unless-stopped
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_S3_BUCKET: shortly-videos-bucket
+      # Not localhost: that is this container, not the host. host.docker.internal is how a container
+      # reaches an S3-compatible endpoint running on the developer's machine.
+      AWS_ENDPOINT_URL: ${AWS_ENDPOINT_URL:-http://host.docker.internal:4566}
+      # This one IS localhost, and deliberately: it is only ever assembled into the URLs written into
+      # the HLS manifest, never fetched by the transcoder.
+      CDN_DOMAIN: ${CDN_DOMAIN:-http://localhost:4566/shortly-videos-bucket}
+      TRANSCODER_WORK_DIR: /work
+      # Must be <= vCPU/2. Each ffmpeg process wants every core, so oversubscribing here makes every job
+      # slower without shortening the queue.
+      TRANSCODER_CONCURRENCY: "2"
+    deploy:
+      resources:
+        limits:
+          # 4 CPUs: 2 concurrent jobs, so each x264 gets roughly half the box. Each ffmpeg process will
+          # otherwise try to use every core and the two jobs fight.
+          cpus: "4.0"
+          # A 500 MB source plus a ~75 MB ladder, x2 concurrent, plus JVM and ffmpeg overhead.
+          memory: 4G
+    tmpfs:
+      # Scratch space for ffmpeg. tmpfs is RAM-backed, so this bounds disk usage and keeps segment
+      # writes off the container's writable layer.
+      - /work:size=2G,mode=1777
 
 volumes:
   postgres_data:

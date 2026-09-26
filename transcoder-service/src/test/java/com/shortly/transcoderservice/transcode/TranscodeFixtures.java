@@ -7,15 +7,7 @@ import org.springframework.util.unit.DataSize;
 import java.time.Duration;
 import java.util.List;
 
-/**
- * Test fixtures for the transcode layer.
- * <p>
- * {@link TranscoderProperties} is a record with twenty-one components, so every construction
- * site has to name all of them positionally. Centralising that here means adding a component
- * breaks one file with a compiler error, rather than silently reordering arguments across a
- * dozen tests. Tests should call {@link #productionDefaults()} and, when they need to vary
- * something, the specific named factory for that variation.
- */
+/** Test fixtures for the transcode layer. */
 final class TranscodeFixtures {
 
     static final DataSize FIVE_HUNDRED_MB = DataSize.ofMegabytes(500);
@@ -23,10 +15,8 @@ final class TranscodeFixtures {
     private TranscodeFixtures() {
     }
 
-    /**
-     * Production defaults: the built-in 6-rung 9:16 ladder, 30fps output, 2s segments,
-     * veryfast x264, AAC-LC stereo, 10x10 sprite sheet, preflight verification on.
-     */
+    /** Production defaults: the built-in 6-rung 9:16 ladder, 30fps output, 2s segments, veryfast x264,
+     * AAC-LC stereo, 10x10 sprite sheet, preflight verification on. */
     static TranscoderProperties productionDefaults() {
         return build(30, Duration.ofMinutes(10), "/work", true);
     }

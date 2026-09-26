@@ -5,15 +5,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
-/**
- * Registration details.
- *
- * <p>The length limits exist for the database as much as for validation: without them a
- * multi-megabyte title is accepted, truncated to the column width, and the user is never told.
- *
- * <p>The password has no composition rules on purpose. Length is what actually resists
- * guessing; rules mostly produce {@code Passw0rd!}.
- */
+/** Registration details. The length limits exist for the database as much as for validation:
+ * never told. */
 public record RegisterRequest(
 
         @NotBlank(message = "Username is required.")

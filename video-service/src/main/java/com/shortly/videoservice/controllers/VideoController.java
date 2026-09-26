@@ -15,13 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * Video endpoints.
- *
- * <p>The caller is a {@link CallerIdentity} parameter, resolved from the gateway-asserted
- * {@code X-User-Id}. No controller in this service reads that header directly, so none of them can
- * be reached without a verified gateway secret.
- */
+/** Video endpoints. */
 @RestController
 @RequestMapping("/api/v1/videos")
 @RequiredArgsConstructor
@@ -29,12 +23,7 @@ public class VideoController {
 
     private final VideoService videoService;
 
-    /**
-     * Begins an upload.
-     * <p>
-     * {@code @Valid} is what activates the content-type allow-list and the length limits. Without
-     * it the constraints on the record are documentation.
-     */
+    /** Begins an upload. */
     @PostMapping
     public ResponseEntity<CreateS3PresignedUrlResponse> createVideo(
             @Valid @RequestBody CreateS3PresignedUrlRequest request,
@@ -43,12 +32,8 @@ public class VideoController {
                 .body(videoService.createVideo(request, caller.userId()));
     }
 
-    /**
-     * Confirms the bytes landed and queues the video for transcoding.
-     * <p>
-     * 202, not 200: the video is now PROCESSING and may take a minute to become playable. A 200
-     * would tell the client it can play it now.
-     */
+    /** Confirms the bytes landed and queues the video for transcoding. 202, not 200: the video is now
+     * PROCESSING and may take a minute to become playable. */
     @PostMapping("/{id}/complete")
     public ResponseEntity<VideoResponse> confirmUploadComplete(
             @PathVariable UUID id,
@@ -66,10 +51,7 @@ public class VideoController {
         return ResponseEntity.ok(videoService.selectThumbnail(id, request, caller.userId()));
     }
 
-    /**
-     * Public. A feed has to render before a viewer is necessarily signed in, and the playback URL
-     * it returns is already an unauthenticated CDN URL.
-     */
+    /** Public. */
     @GetMapping("/{id}")
     public ResponseEntity<VideoResponse> getVideoById(@PathVariable UUID id) {
         return ResponseEntity.ok(videoService.getVideoById(id));

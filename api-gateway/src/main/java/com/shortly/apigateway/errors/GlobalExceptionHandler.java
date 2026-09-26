@@ -19,17 +19,8 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 import java.net.URI;
 import java.util.UUID;
 
-/**
- * Gateway-level error handling.
- *
- * <p>The gateway has no controllers, so this handles a narrow set: routing failures the gateway
- * itself raises, and anything the framework throws before a request reaches a service. Most
- * rejections originate in {@code JwtAuthenticationFilter} and are written there directly, because
- * a filter runs before this advice.
- *
- * <p>Uses the same {@link ApiError} codes as the services, so a client branches on the code and
- * does not need to know which hop answered.
- */
+/** Gateway-level error handling. Uses the same {@link ApiError} codes as the services, so a client
+ * branches on the code and does not need to know which hop answered. */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -57,13 +48,8 @@ public class GlobalExceptionHandler {
                 .body(detail);
     }
 
-    /**
-     * A downstream service is unreachable, or timed out.
-     * <p>
-     * 503 rather than 500, because this is the one gateway failure that is genuinely worth
-     * retrying, and a client that cannot tell the difference will eventually stop retrying the
-     * cases where it should.
-     */
+    /** A downstream service is unreachable, or timed out. 503 rather than 500, because this is the one
+     * will eventually stop retrying the cases where it should. */
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<ProblemDetail> handleResponseStatus(ResponseStatusException e,
                                                               HttpServletRequest request) {
@@ -82,12 +68,8 @@ public class GlobalExceptionHandler {
                         "Request body is missing or is not valid JSON.", request));
     }
 
-    /**
-     * Anything else.
-     * <p>
-     * Returns a trace id rather than the message, because a gateway exception can carry upstream
-     * connection details that have no business reaching a client.
-     */
+    /** Anything else. Returns a trace id rather than the message, because a gateway exception can carry
+     * upstream connection details that have no business reaching a client. */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ProblemDetail> handleUnexpected(Exception e, HttpServletRequest request) {
         String traceId = UUID.randomUUID().toString();

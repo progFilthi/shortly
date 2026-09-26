@@ -27,12 +27,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-/**
- * Object storage access for the worker.
- *
- * <p>Not a generic S3 wrapper: this is the only writer of the processed output tree and needs
- * six operations. Anything broader should be argued for on its own merits.
- */
+/** Object storage access for the worker. Not a generic S3 wrapper: this is the only writer of the
+ * processed output tree and needs six operations. */
 @Component
 public class TranscoderObjectStore {
 
@@ -55,12 +51,7 @@ public class TranscoderObjectStore {
 
     /* --------------------------------- reading --------------------------------- */
 
-    /**
-     * Streams an object to a local file. Used to pull the uploaded original into the
-     * container's ephemeral disk, because ffmpeg needs a seekable local file - it cannot
-     * read an S3 stream efficiently, and piping through stdin prevents the two-pass and
-     * thumbnail work this pipeline does.
-     */
+    /** Streams an object to a local file. */
     public void downloadToFile(String key, Path destination) {
         try (InputStream in = syncClient.getObject(
                 GetObjectRequest.builder().bucket(properties.bucketName()).key(key).build())) {
@@ -107,12 +98,7 @@ public class TranscoderObjectStore {
         }
     }
 
-    /**
-     * Reads a small JSON sidecar into a contract type.
-     *
-     * <p>Empty rather than throwing when absent - the caller's fallback for a missing sidecar is
-     * a degraded event, which beats re-running the job.
-     */
+    /** Reads a small JSON sidecar into a contract type. */
     public <T> java.util.Optional<T> readSidecar(String key, Class<T> type) {
         try (InputStream in = syncClient.getObject(
                 GetObjectRequest.builder().bucket(properties.bucketName()).key(key).build())) {
@@ -143,12 +129,7 @@ public class TranscoderObjectStore {
 
     /* --------------------------------- writing --------------------------------- */
 
-    /**
-     * Uploads one generated artifact asynchronously. Content type and cache control are set
-     * explicitly rather than left to the SDK's default, because a manifest served as
-     * {@code application/octet-stream} or a segment served without cache headers will
-     * quietly break ABR or force a re-download on every view.
-     */
+    /** Uploads one generated artifact asynchronously. */
     public CompletableFuture<Void> putAsync(String key, Path file, String contentType, String cacheControl) {
         long size = file.toFile().length();
         return asyncClient.putObject(
@@ -167,15 +148,8 @@ public class TranscoderObjectStore {
         putAsync(key, file, contentType, cacheControl).join();
     }
 
-    /**
-     * Best-effort cleanup of a partially produced ladder.
-     * <p>
-     * Called when a job fails after some artifacts have already been uploaded. The failure
-     * path must never mask the original error, so every failure here is logged and
-     * swallowed - and note this is a convenience, not a correctness mechanism: correctness
-     * comes from uploading the master manifest LAST, so a half-built ladder is never
-     * reachable by a player even if this cleanup is interrupted.
-     */
+    /** Best-effort cleanup of a partially produced ladder. Called when a job fails after some artifacts
+     * have already been uploaded. */
     public void deleteQuietly(List<String> keys) {
         if (keys == null || keys.isEmpty()) {
             return;
@@ -204,10 +178,8 @@ public class TranscoderObjectStore {
 
     /* --------------------------------- copying --------------------------------- */
 
-    /**
-     * Server-side copy, used to publish a poster frame without round-tripping bytes through
-     * the worker. Same-region S3 copies are free.
-     */
+    /** Server-side copy, used to publish a poster frame without round-tripping bytes through the
+     * worker. */
     public void copyWithinBucket(String sourceKey, String destinationKey) {
         syncClient.copyObject(CopyObjectRequest.builder()
                 .bucket(properties.bucketName())

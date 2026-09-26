@@ -11,26 +11,8 @@ import java.util.Comparator;
 import java.util.UUID;
 import java.util.stream.Stream;
 
-/**
- * Per-job scratch space on the container's local disk.
- * <p>
- * NOT a Spring bean. One instance exists per job, created by {@link TranscodePipeline} inside a
- * try-with-resources so the directory is removed on every exit path. Registering it as a
- * singleton would mean one shared directory for every concurrent job.
- * <p>
- * ffmpeg cannot work efficiently against an S3 stream: the HLS muxer needs to seek and
- * rewrite its own output directory, and the thumbnail pass re-reads the file. So the source
- * is staged locally, encoded locally, and only the finished artifacts go to S3.
- * <p>
- * Sizing: budget for {@code concurrency x (largest source + full ladder)}. At the default
- * 500 MB ceiling, a 6-rung ladder and concurrency 2 that is roughly 1.2 GB, so the container
- * needs a corresponding ephemeral-storage limit. Set {@code workDir} to a tmpfs mount if
- * you would rather have the kernel enforce the ceiling than the application.
- * <p>
- * Every job gets a unique directory. That is what makes the directory safe to delete
- * unconditionally on the way out, even if a previous attempt at the same video crashed
- * without cleaning up after itself.
- */
+/** Per-job scratch space on the container's local disk. ffmpeg cannot work efficiently against an
+ * pass re-reads the file. */
 public class JobWorkspace implements AutoCloseable {
 
     private static final Logger log = LoggerFactory.getLogger(JobWorkspace.class);
@@ -73,11 +55,7 @@ public class JobWorkspace implements AutoCloseable {
         return videoId;
     }
 
-    /**
-     * Deletes everything this job wrote. Never throws: a cleanup failure must not replace
-     * the real error that brought us here. The cost of a leaked directory is reclaimed by
-     * the container's ephemeral storage limit, not by crashing the listener.
-     */
+    /** Deletes everything this job wrote. */
     @Override
     public void close() {
         if (!Files.exists(jobDir)) {

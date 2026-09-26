@@ -16,18 +16,8 @@ import org.springframework.stereotype.Component;
 import java.time.Instant;
 import java.util.Optional;
 
-/**
- * Consumes {@link VideoUploadedEvent} and drives one video to {@code READY} or {@code FAILED}.
- *
- * <p><b>Who owns the row.</b> This service never writes to video-service's database. It publishes
- * an outcome and lets video-service, which owns the aggregate, apply the transition - so a
- * transcoder outage cannot corrupt video metadata and the two deploy independently.
- *
- * <p><b>No manual acking.</b> The container acks on normal return and the queue has a
- * dead-letter chain, so an exhausted retry budget lands in the DLQ rather than being lost or
- * hot-looping. Non-terminal failures are rethrown so the interceptor can retry; terminal ones are
- * published and swallowed, because retrying a 70-second video never succeeds.
- */
+/** Consumes {@link VideoUploadedEvent} and drives one video to {@code READY} or {@code FAILED}. Who
+ * owns the row. This service never writes to video-service's database. */
 @Component
 public class VideoUploadedListener {
 
@@ -55,12 +45,7 @@ public class VideoUploadedListener {
         log.info("Received upload for video {} (user {}, key {}, {} bytes)",
                 event.videoId(), event.userId(), event.s3Key(), event.fileSizeBytes());
 
-        /*
-         * Idempotency. Redelivery is normal - a consumer crash mid-job, a broker restart, a
-         * redeploy - and re-running a 6-rung transcode is expensive enough to be worth
-         * avoiding. The presence of the master manifest is the authoritative signal that the
-         * ladder completed, because it is only ever uploaded after every segment is durable.
-         */
+        /** Idempotency. */
         String manifestKey = storage.manifestKey(event.videoId());
         if (objectStore.exists(manifestKey)) {
             log.info("Ladder for video {} already exists at {}; skipping re-encode",
@@ -80,26 +65,23 @@ public class VideoUploadedListener {
             TranscodeFailureReason reason = TranscodePipeline.classify(e);
 
             if (reason.isRetryable()) {
-                // Rethrow so the container's retry interceptor gets a chance. The message is
-                // only dead-lettered once that budget is spent.
+                // Rethrow so the container's retry interceptor gets a chance. The message is only dead-lettered
+                // once that budget is spent.
                 log.error("Retryable failure processing video {} ({}); will retry",
                         event.videoId(), reason, e);
                 throw e;
             }
 
-            // Terminal. Recorded against the video, then swallowed: requeueing would spin
-            // forever on an input that is permanently invalid.
+            // Terminal. Recorded against the video, then swallowed: requeueing would spin forever on an input
+            // that is permanently invalid.
             log.error("Video {} failed permanently ({}): {}", event.videoId(), reason, e.getMessage());
             publish(new VideoFailedEvent(
                     event.videoId(), event.userId(), reason, safeMessage(e), false, Instant.now()));
         }
     }
 
-    /**
-     * Re-publishes readiness for a ladder that already exists, from the sidecar the original job
-     * wrote. That sidecar is what makes this exact: without it the path would have to re-parse
-     * every media playlist or republish guessed metadata.
-     */
+    /** Re-publishes readiness for a ladder that already exists, from the sidecar the original job
+     * wrote. */
     private void republishReadyFromExistingOutput(VideoUploadedEvent event) {
         Optional<VideoReadyEvent> stored = objectStore.readSidecar(
                 storage.readyEventKey(event.videoId()), VideoReadyEvent.class);
@@ -110,9 +92,8 @@ public class VideoUploadedListener {
             return;
         }
 
-        // The manifest exists but the sidecar does not, which means an older build produced
-        // this ladder. Publish the minimum a client can act on rather than dropping the event:
-        // the manifest URL alone is enough to play, and the feed can fill in the rest.
+        // The manifest exists but the sidecar does not, which means an older build produced this ladder.
+        // Publish the minimum a client can act on rather than dropping the event:
         log.warn("Video {} has a ladder but no sidecar; publishing manifest URL only",
                 event.videoId());
         publish(new VideoReadyEvent(
@@ -146,11 +127,7 @@ public class VideoUploadedListener {
                 event);
     }
 
-    /**
-     * ffmpeg's stderr is attacker-influenced. The full text goes to the log; the event
-     * carries only the first line, which is enough for a support conversation and safe to
-     * store in a column a human may read.
-     */
+    /** ffmpeg's stderr is attacker-influenced. */
     private String safeMessage(Throwable error) {
         String message = error.getMessage();
         if (message == null) {

@@ -17,20 +17,8 @@ import java.util.Date;
 import java.util.Optional;
 import java.util.UUID;
 
-/**
- * Issues and verifies access tokens.
- *
- * <p>One implementation, used by both the auth service that mints tokens and the gateway that
- * checks them. That matters: verification rules that exist in two places will eventually differ,
- * and a difference here is an authentication bypass rather than a bug.
- *
- * <p>Access tokens are JWTs because verification runs on every request and must not touch a
- * database. The cost of that statelessness is that a token cannot be revoked before it expires -
- * so the expiry <em>is</em> the revocation policy, and it is deliberately short.
- *
- * <p>Not a Spring bean. It is constructed by whichever service needs it, from that service's own
- * configuration, so it carries no framework dependency and is trivially testable.
- */
+/** Issues and verifies access tokens. Access tokens are JWTs because verification runs on every
+ * request and must not touch a database. */
 public final class JwtCodec {
 
     private static final Logger log = LoggerFactory.getLogger(JwtCodec.class);
@@ -77,12 +65,7 @@ public final class JwtCodec {
         }
     }
 
-    /**
-     * Mints an access token.
-     *
-     * <p>Carries a unique {@code jti} so two tokens issued in the same second are still
-     * distinguishable - useful when tracing a specific session.
-     */
+    /** Mints an access token. */
     public String issueAccessToken(String userId, String username, String email, Duration ttl) {
         Instant issuedAt = clock.instant();
         return Jwts.builder()
@@ -98,13 +81,8 @@ public final class JwtCodec {
                 .compact();
     }
 
-    /**
-     * Verifies a token.
-     * <p>
-     * Returns a result rather than throwing, because the two failure modes need different
-     * responses: an expired token means "refresh and retry", an invalid one means "sign in
-     * again", and collapsing them leaves clients unable to recover on their own.
-     */
+    /** Verifies a token. Returns a result rather than throwing, because the two failure modes need
+     * again", and collapsing them leaves clients unable to recover on their own. */
     public Verification verify(String token) {
         if (token == null || token.isBlank()) {
             return Verification.failed(FailureReason.INVALID);
@@ -112,8 +90,8 @@ public final class JwtCodec {
         try {
             Claims claims = Jwts.parser()
                     .verifyWith(signingKey)
-                    // Pinning the issuer means a token signed with the same key but intended for
-                    // a different environment is rejected.
+                    // Pinning the issuer means a token signed with the same key but intended for a different
+                    // environment is rejected.
                     .requireIssuer(issuer)
                     .clock(() -> Date.from(clock.instant()))
                     .build()
@@ -151,13 +129,7 @@ public final class JwtCodec {
                 : Optional.empty();
     }
 
-    /**
-     * Decodes and validates the signing key.
-     * <p>
-     * Fails at construction rather than at first use. A missing or short secret is a deployment
-     * mistake, and a service that starts but cannot mint or verify tokens fails somewhere far less
-     * obvious. HS256 requires at least 256 bits of key material.
-     */
+    /** Decodes and validates the signing key. Fails at construction rather than at first use. */
     private static SecretKey decodeKey(String base64Secret) {
         if (base64Secret == null || base64Secret.isBlank()) {
             throw new IllegalStateException(

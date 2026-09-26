@@ -1,19 +1,6 @@
 package com.shortly.contracts.errors;
 
-/**
- * Canonical error codes and their HTTP statuses, shared by every service.
- *
- * <p>The point is that a client can branch on {@code code} without special-casing which service
- * answered. A 401 from the gateway and a 401 from auth-service both report
- * {@code TOKEN_EXPIRED}, and an oversized upload reports {@code UPLOAD_TOO_LARGE} rather than a
- * free-text message that would have to be pattern-matched.
- *
- * <p>HTTP status is carried as a plain int so this module stays framework-free. A service's
- * handler reads {@link #httpStatus()} and builds a {@code ProblemDetail} from it.
- *
- * <p>Adding a code is safe. Renaming or repurposing one is a breaking API change, because
- * clients are expected to switch on it.
- */
+/** Canonical error codes and their HTTP statuses, shared by every service. */
 public enum ApiError {
 
     /* ------------------------------- 400 Bad Request ------------------------------ */

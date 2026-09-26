@@ -26,10 +26,7 @@ public class S3Config {
     @Value("${aws.credentials.access-key}")
     private String accessKey;
 
-    /**
-     * Optional S3-compatible endpoint. Set to http://minio:9000 locally; unset against real
-     * AWS, where the regional endpoint is derived from {@code aws.region}.
-     */
+    /** Optional S3-compatible endpoint. */
     @Value("${aws.endpoint-url:}")
     private String endpointUrl;
 
@@ -50,10 +47,8 @@ public class S3Config {
         return builder.build();
     }
 
-    /**
-     * Synchronous client for the control-plane calls: HEAD to verify an upload and DELETE to
-     * remove a rejected one. The presigner cannot do either - it only mints URLs.
-     */
+    /** Synchronous client for the control-plane calls: HEAD to verify an upload and DELETE to remove a
+     * rejected one. */
     @Bean
     public S3Client s3Client() {
         S3ClientBuilder builder = S3Client.builder()

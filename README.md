@@ -33,7 +33,7 @@ The current code implements the first two capabilities only in part. The remaini
 ├── shortly-ios/          Swift client (register, sign in, refresh, upload, profile)
 ├── scripts/              e2e-auth-test.sh and e2e-pipeline-test.sh
 ├── docs/                 authentication.md, ios-client.md, transcoding.md, init-db.sql
-├── docker-compose.yaml   Local infrastructure only (Postgres, Redis, RabbitMQ)
+├── docker-compose.yaml   Local infrastructure + the transcoder (needs its own ffmpeg)
 └── pom.xml               Maven reactor
 ```
 
@@ -124,33 +124,22 @@ Full detail in [docs/transcoding.md](docs/transcoding.md).
 ### Local tooling
 
 - JDK 25. Every service declares Java 25 in its Maven POM.
-- Docker with Docker Compose, for the infrastructure only.
-- ffmpeg and ffprobe with `zscale`, for the transcoder — see below.
+- Docker with Docker Compose, for the infrastructure and the transcoder.
 - Network access for the first Maven dependency download and for AWS SDK access.
 - An S3-compatible bucket and a CDN/base URL, for uploads and playback.
 
 The repository includes Maven Wrapper `3.9.16`; use `./mvnw` rather than relying on a system Maven installation.
 
-#### ffmpeg
-
-The transcoder runs on the host, so it uses your ffmpeg rather than the pinned Alpine build in its
-`Dockerfile`. It preflights its toolchain at startup and refuses to start if `zscale` or `tonemap`
-is missing. Homebrew's `ffmpeg` is built without `libzimg` and so has neither; the `homebrew-ffmpeg`
-tap has both:
-
-```bash
-brew tap homebrew-ffmpeg/ffmpeg
-brew uninstall ffmpeg
-brew install homebrew-ffmpeg/ffmpeg/ffmpeg
-```
-
-`HlsCommandBuilderIT` skips itself when ffmpeg is not on `PATH`, so a green `./mvnw verify` does
-not prove the ladder was exercised.
+ffmpeg is **not** a host requirement. The transcoder runs in Docker and uses the pinned Alpine
+build from its own `Dockerfile`, which is the one that has `zscale` and `tonemap`. The service
+preflights its toolchain at startup and refuses to start if either is missing, so if you ever move
+it onto the host you need an ffmpeg built with `libzimg` — Homebrew's default `ffmpeg` formula is
+not one.
 
 ### Ports
 
-Every application service runs as its own host process, so these ports must be unique on the
-machine. That is why the transcoder is on `8085` and not the `8080` it used in its container.
+Every host-run service is its own process, so those ports must be unique on the machine. The
+transcoder is the exception: it is the only service still in Docker, and its port is not published.
 
 | Port | Component |
 | ---: | --- |
@@ -164,38 +153,39 @@ machine. That is why the transcoder is on `8085` and not the `8080` it used in i
 | `8082` | Video service |
 | `8083` | Interaction service (scaffold) |
 | `8084` | Feed service (scaffold) |
-| `8085` | Transcoder actuator only; no business endpoints |
 | `8086` | Notification service (scaffold) |
+| `8080` in-container | Transcoder actuator only; not published to the host |
 
 ## Local infrastructure and services
-
-Compose runs the stateful dependencies and nothing else:
 
 ```bash
 docker compose up -d
 docker compose ps
 ```
 
-| Service | Notes |
-| --- | --- |
-| `postgres` | Credentials `shortly_admin` / `shortly_password`, initial database `auth_db`. |
-| `redis` | No authentication. |
-| `rabbitmq` | Credentials `guest` / `guest`, management UI on `15672`. |
+| Service | Where it runs | Notes |
+| --- | --- | --- |
+| `postgres` | Docker | Credentials `shortly_admin` / `shortly_password`, initial database `auth_db`. |
+| `redis` | Docker | No authentication. |
+| `rabbitmq` | Docker | Credentials `guest` / `guest`, management UI on `15672`. |
+| `transcoder` | Docker | Needs the ffmpeg build in its `Dockerfile`. Capped at 4 CPUs with `/work` as a 2 GB tmpfs. |
 
-The application services are **not** in Compose. Run them from the IDE — the gutter arrow next to
-each `*Application` class, or a compound configuration:
+The other three run on the host from the IDE — the gutter arrow next to each `*Application` class,
+or a compound configuration:
 
 | Service | How to start it |
 | --- | --- |
 | `auth-service` | `AuthServiceApplication.main` |
 | `video-service` | `VideoServiceApplication.main` |
 | `api-gateway` | `ApiGatewayApplication.main` |
-| `transcoder-service` | `TranscoderServiceApplication.main` |
 
-The per-service `Dockerfile`s remain in the repository but Compose no longer references them.
+The transcoder stays in Docker for two reasons: it needs the pinned ffmpeg, and it is a worker
+with no business endpoints, so there is nothing in it worth a debugger. The gateway, auth, and
+video services have the request-handling logic you actually want to step through, so those are the
+ones on the host.
 
-No environment variables need to be exported: every service has development defaults in its own
-`application.yaml`. See [Configuration](#configuration).
+No environment variables need to be exported: those three services carry development defaults in
+their own `application.yaml`. See [Configuration](#configuration).
 
 `docs/init-db.sql` creates `video_db`, `interaction_db`, `feed_db`, and `notification_db` when
 PostgreSQL initializes a new data volume. It does not rerun when an existing volume is reused.
@@ -215,8 +205,8 @@ multi-AZ, or a CDN.
 
 ### Object storage is not in Compose
 
-The services default to `http://localhost:4566`. Start LocalStack yourself — the CLI, the desktop
-app, or its own container — then create the bucket and its CORS rule once:
+The host-run services default to `http://localhost:4566`. Start LocalStack yourself — the CLI, the
+desktop app, or its own container — then create the bucket and its CORS rule once:
 
 ```bash
 S3_ENDPOINT=http://localhost:4566 ./scripts/init-local-storage.sh
@@ -226,6 +216,11 @@ The CORS rule is not optional: it is what lets a browser `PUT` to the presigned 
 
 To use a real bucket, empty `AWS_ENDPOINT_URL` and override `AWS_REGION`, `AWS_S3_BUCKET`, and
 `CDN_DOMAIN`.
+
+The transcoder needs its own `AWS_ENDPOINT_URL`, because `localhost` inside a container is that
+container, not your machine. Compose defaults it to `http://host.docker.internal:4566` for exactly
+this reason. Its `CDN_DOMAIN` stays on `localhost`, because that value is only assembled into the
+URLs written into the HLS manifest — the transcoder never fetches it, the player does.
 
 Then exercise the end-to-end pipeline, which covers upload, verification, transcoding, HLS fetch,
 cover selection, and the failure paths:
@@ -262,7 +257,7 @@ of the same name always wins, which is how a real deployment overrides any of it
 | `AWS_S3_BUCKET` | Video, transcoder | `shortly-videos-bucket` | Bucket that receives raw uploads. |
 | `AWS_ENDPOINT_URL` | Video, transcoder | `http://localhost:4566` | S3-compatible endpoint. **Set empty against real AWS.** |
 | `CDN_DOMAIN` | Video, transcoder | `http://localhost:4566/shortly-videos-bucket` | Base URL used to construct the public video URL. Must be reachable by the client. |
-| `TRANSCODER_WORK_DIR` | Transcoder | `${java.io.tmpdir}/shortly-transcoder` | ffmpeg scratch space. Point it at a tmpfs mount in a deployment. |
+| `TRANSCODER_WORK_DIR` | Transcoder | `/work` (Compose) | ffmpeg scratch space. Compose mounts it as a 2 GB tmpfs. |
 | `ACCESS_TOKEN_TTL` | Auth | `15m` | Overridable so the iOS integration test can wait out a real expiry. |
 | `REFRESH_REUSE_GRACE` | Auth | `PT4S` | Shortened from the `PT20S` production default so the e2e script can exercise the grace window without sleeping 20s twice. |
 
@@ -306,19 +301,18 @@ Run the whole build, or one module's tests:
 ./mvnw -pl transcoder-service verify
 ```
 
-Start the services from the IDE — the gutter arrow next to each `*Application` class, or a
-compound configuration that starts all four at once. `spring-boot:run` works from a terminal too,
-and needs no exported variables:
+Start these three from the IDE — the gutter arrow next to each `*Application` class, or a compound
+configuration that starts all three at once. `spring-boot:run` works from a terminal too, and needs
+no exported variables:
 
 ```bash
 ./mvnw -f auth-service/pom.xml spring-boot:run
 ./mvnw -f video-service/pom.xml spring-boot:run
 ./mvnw -f api-gateway/pom.xml spring-boot:run
-./mvnw -f transcoder-service/pom.xml spring-boot:run
 ```
 
-`docker compose up -d` starts only the infrastructure. The feed, interaction, and notification
-modules remain scaffolds.
+`docker compose up -d` starts the infrastructure and the transcoder. The feed, interaction, and
+notification modules remain scaffolds.
 
 The gateway, auth, video, and transcoder services have real test coverage: 146 tests in total, including JWT expiry and tampering, refresh rotation and reuse detection, account lockout, gateway header sanitizing, and transcoding against real ffmpeg. To run the two end-to-end suites against a live stack:
 
@@ -451,8 +445,9 @@ The declared content type must be one of `video/mp4`, `video/quicktime`, `video/
 `video/quicktime` to `.mov`, `video/x-m4v` to `.m4v`, `video/webm` to `.webm`,
 `video/x-matroska` to `.mkv`, and `video/mp4` to `.mp4`.
 
-The presigned URL is built from `AWS_ENDPOINT_URL`, so a local run points straight at LocalStack on
-`localhost:4566` and needs no rewriting from a browser. Against real S3 no change is needed.
+The presigned URL is built from `AWS_ENDPOINT_URL`, and for the host-run services that points at
+LocalStack on `localhost:4566`, so a browser upload needs no rewriting. Against real S3 no change is
+needed.
 
 ### Complete and retrieve a video
 
@@ -541,7 +536,7 @@ These are important before exposing the services outside a trusted development m
 5. **The reserved services are not API-ready.** Their gateway routes, ports, and web dependencies are not wired consistently.
 6. **Operational controls are absent.** There is no CI, OpenAPI contract, rate limiting, DLQ replay tooling, or reconciliation job for videos stuck in `PROCESSING`. S3 lifecycle rules for the `raw/` prefix are recommended but not provisioned.
 7. **Static AWS credentials are used for real buckets.** A local `video-service/.env` holds them and is gitignored, so nothing has leaked into the repository — but the service is configured with long-lived keys rather than an IAM role, which is what production should use.
-8. **The application config ships default secrets and a LocalStack endpoint.** `JWT_SIGNING_SECRET`, `GATEWAY_INTERNAL_SECRET`, the database credentials, and `AWS_ENDPOINT_URL` all have development defaults in the per-service `application.yaml` files, so a local Run button works with nothing to export. They must be overridden by real environment variables everywhere else. The `test` AWS keys and the localhost endpoint are the sharpest edge: against real S3, `AWS_ENDPOINT_URL` has to be explicitly emptied.
+8. **The application config ships default secrets and a LocalStack endpoint.** `JWT_SIGNING_SECRET`, `GATEWAY_INTERNAL_SECRET`, the database credentials, and `AWS_ENDPOINT_URL` all have development defaults in the gateway, auth, and video `application.yaml` files, so a local Run button works with nothing to export. They must be overridden by real environment variables everywhere else. The `test` AWS keys and the localhost endpoint are the sharpest edge: against real S3, `AWS_ENDPOINT_URL` has to be explicitly emptied.
 9. **Authentication is still incomplete** — refresh tokens are Postgres-only, so there is no "sign out everywhere" across a fleet; there is no per-IP rate limiting; and there is no email verification, password reset, or MFA. The client now refreshes automatically, so this list is one item shorter than it was. See [docs/authentication.md §7](docs/authentication.md).
 10. **Display-matrix rotation is unverified end to end.** The probe logic is unit-tested, but ffmpeg's own decode-time rotation is not exercised, because ffmpeg 8 cannot write a display matrix to generate a fixture with. **Test with a real portrait iPhone clip before trusting it.** See [docs/transcoding.md](docs/transcoding.md).
 

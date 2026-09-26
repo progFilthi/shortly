@@ -6,14 +6,7 @@ import lombok.*;
 import java.time.Instant;
 import java.util.UUID;
 
-/**
- * A refresh token, stored by hash.
- *
- * <p>{@code familyId} groups every token descended from one sign-in. Rotation issues a new token
- * in the same family; reuse detection revokes the family. That grouping is what makes a stolen
- * token detectable at all - without it, "this token was already used" identifies a token but not
- * the rest of the session to kill.
- */
+/** A refresh token, stored by hash. */
 @Entity
 @Table(name = "refresh_tokens", indexes = {
         @Index(name = "idx_refresh_tokens_hash", columnList = "tokenHash", unique = true),
@@ -73,10 +66,7 @@ public class RefreshToken {
         return now.isAfter(expiresAt);
     }
 
-    /**
-     * A token is live only if it has been neither consumed nor revoked nor expired. Used by the
-     * "log out everywhere" bulk revoke so it does not need to load and filter every row.
-     */
+    /** A token is live only if it has been neither consumed nor revoked nor expired. */
     public boolean isActiveAt(Instant now) {
         return !isConsumed() && !isRevoked() && !isExpiredAt(now);
     }

@@ -1,11 +1,7 @@
 package com.shortly.contracts.errors;
 
-/**
- * Standard properties attached to every problem response, beyond the RFC 9457 core fields.
- *
- * <p>A stable vocabulary so a client can read {@code problem.getProperties()[TRACE_ID]} without
- * knowing which service answered.
- */
+/** Standard properties attached to every problem response, beyond the RFC 9457 core fields. A
+ * which service answered. */
 public final class ProblemProperties {
 
     /** Machine-readable error code. Matches {@link ApiError#wireValue()}. */

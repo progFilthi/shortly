@@ -11,11 +11,8 @@ import java.time.Instant;
 @Component
 public class UserMapper {
 
-    /**
-     * @param token    access token
-     * @param refresh  refresh token, returned once and never recoverable again
-     * @param issuedAt when this pair was minted, so a client can reason about clock skew
-     */
+    /** @param token access token @param refresh refresh token, returned once and never recoverable
+     * again @param issuedAt when this pair was minted, so a client can reason about clock skew */
     public AuthResponse toAuthResponse(User user,
                                       String token,
                                       String refresh,

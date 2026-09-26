@@ -1,13 +1,4 @@
-#!/usr/bin/env bash
-#
-# End-to-end smoke test for authentication, exercised through the gateway.
-#
-# Everything goes through :8080 rather than calling a service directly, because the gateway is
-# the only supported entry point - the services now reject anything without the internal secret.
-# That makes this a real test of the trust chain rather than just of the endpoints.
-#
-# Covers: register, login, /me, refresh, rotation, reuse detection, logout, lockout, and the
-# gateway's refusal to accept a forged identity header.
+# !/usr/bin/env bash
 
 set -euo pipefail
 
@@ -173,10 +164,8 @@ CODE=$(curl -s -o /dev/null -w '%{http_code}' "$GATEWAY/api/v1/auth/me" \
 pass "200"
 
 step "A replay inside the grace window is tolerated"
-# A mobile client that retried after a lost response lands here. Without this the caller loses
-# the only copy of its token and the user appears logged out at random.
-# The response is still 401 - the caller cannot know whether it was tolerated or detected - but
-# the token it received from the earlier response is untouched.
+# A mobile client that retried after a lost response lands here. Without this the caller loses the
+# only copy of its token and the user appears logged out at random.
 CODE=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$GATEWAY/api/v1/auth/refresh" \
     -H 'Content-Type: application/json' -d "{\"refreshToken\":\"$REFRESH\"}")
 [ "$CODE" = "401" ] || fail "expected 401 replaying a consumed token, got $CODE"
@@ -187,8 +176,8 @@ CODE=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$GATEWAY/api/v1/auth/refr
 pass "tolerated, session intact"
 
 step "A replay after the grace window revokes the family"
-# Outside the window this is genuine reuse: two parties hold the token and there is no way to
-# tell which is the real client. The only safe response is to end the session for both.
+# Outside the window this is genuine reuse: two parties hold the token and there is no way to tell
+# which is the real client. The only safe response is to end the session for both.
 echo "    waiting out the reuse grace window..."
 sleep 6
 
@@ -269,8 +258,7 @@ pass "423"
 
 step "An unknown route is 404 for an authenticated caller"
 # Authenticated deliberately. The gateway rejects anonymous requests before routing, so an
-# unauthenticated 404 is unreachable - and 401-first is the right answer anyway, since it does
-# not confirm whether the path exists.
+# unauthenticated 404 is unreachable - and 401-first is the right answer anyway
 LOGIN=$(curl -s -X POST "$GATEWAY/api/v1/auth/login" -H 'Content-Type: application/json' \
     -d "{\"identifier\":\"$USERNAME\",\"password\":\"$PASSWORD\"}")
 L3=$(printf '%s' "$LOGIN" | jq_get "['token']")

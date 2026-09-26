@@ -28,14 +28,8 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-/**
- * Turns every escaping exception into one consistent RFC 9457 problem document.
- *
- * <p>Why this matters concretely: without it, an oversized upload and a genuine bug both arrive as
- * a 500, so the client retries the first forever and never reports the second. Every response
- * carries a {@code code} from the shared {@link ApiError}, so a client branches on the code rather
- * than pattern-matching a message.
- */
+/** Turns every escaping exception into one consistent RFC 9457 problem document. Why this matters
+ * client retries the first forever and never reports the second. */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -74,12 +68,8 @@ public class GlobalExceptionHandler {
         return respond(ApiError.UNPROCESSABLE, e.getMessage(), request);
     }
 
-    /**
-     * An upload that failed verification.
-     * <p>
-     * 413 for oversized, because the client can act on that by picking a shorter clip. 409 for
-     * missing or empty, which means the PUT never completed and should simply be retried.
-     */
+    /** An upload that failed verification. 413 for oversized, because the client can act on that by
+     * simply be retried. */
     @ExceptionHandler(UploadVerificationException.class)
     public ResponseEntity<ProblemDetail> handleUploadVerification(UploadVerificationException e,
                                                                  HttpServletRequest request) {
@@ -101,10 +91,8 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(status).body(detail);
     }
 
-    /**
-     * A request that reached a handler needing a caller but had none, which means it bypassed the
-     * gateway. 403 rather than 500.
-     */
+    /** A request that reached a handler needing a caller but had none, which means it bypassed the
+     * gateway. 403 rather than 500. */
     @ExceptionHandler(CallerIdentityArgumentResolver.CallerIdentityNotResolvedException.class)
     public ResponseEntity<ProblemDetail> handleNoCaller(
             CallerIdentityArgumentResolver.CallerIdentityNotResolvedException e,
@@ -194,11 +182,7 @@ public class GlobalExceptionHandler {
 
     /* --------------------------------- fallback ---------------------------------- */
 
-    /**
-     * Anything unhandled gets a fresh trace id, returned to the client and written to the log.
-     * The exception message is never returned: it routinely contains SQL, file paths, or
-     * attacker-supplied input.
-     */
+    /** Anything unhandled gets a fresh trace id, returned to the client and written to the log. */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ProblemDetail> handleUnexpected(Exception e, HttpServletRequest request) {
         String traceId = UUID.randomUUID().toString();

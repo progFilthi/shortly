@@ -43,20 +43,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/**
- * Auth endpoints: status codes, and the error contract.
- *
- * <p>A slice rather than a full context load. The service layer is covered directly by
- * {@code AuthServiceLoginTest} and {@code RefreshTokenServiceTest}; this is about the HTTP surface
- * and the shape of the errors, which is what a client actually depends on.
- */
+/** Auth endpoints: status codes, and the error contract. */
 @WebMvcTest(AuthController.class)
-// The real SecurityConfig, not Spring Boot's default. Importing it is what disables CSRF and
-// permits /api/v1/auth/**, so these assertions test the actual security posture rather than a
-// default that would reject every POST with an empty 403.
-//
-// The filters stay in the chain: SecurityConfig needs them as beans, and the gateway-secret filter
-// is a no-op here because the test profile sets require-gateway-secret: false.
+// The real SecurityConfig, not Spring Boot's default.
 @Import({GlobalExceptionHandler.class, SecurityConfig.class})
 class AuthControllerErrorMappingTest {
 
@@ -68,14 +57,8 @@ class AuthControllerErrorMappingTest {
     @MockitoBean
     private AuthService authService;
 
-    /**
-     * The filters need a codec to construct. Mocked because these tests are about the controller
-     * and the error contract; JwtCodecTest covers verification directly, including expiry,
-     * forgery, and the alg:none bypass.
-     * <p>
-     * Unstubbed, so it returns an empty Optional - which is exactly right for these requests,
-     * since none of them carry an Authorization header and the filter must pass them through.
-     */
+    /** The filters need a codec to construct. Unstubbed, so it returns an empty Optional - which is
+     * filter must pass them through. */
     @MockitoBean
     private JwtTokenProvider jwtTokenProvider;
 
@@ -98,8 +81,8 @@ class AuthControllerErrorMappingTest {
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.token").value("access-token"))
-                // The client needs the refresh token and the lifetimes; without expiresIn it can
-                // only discover expiry by getting a 401.
+                // The client needs the refresh token and the lifetimes; without expiresIn it can only discover
+                // expiry by getting a 401.
                 .andExpect(jsonPath("$.refreshToken").value("refresh-token"))
                 .andExpect(jsonPath("$.expiresIn").value(900))
                 .andExpect(jsonPath("$.userId").value("user-1"));
@@ -107,8 +90,8 @@ class AuthControllerErrorMappingTest {
 
     @Test
     void meRequiresAuthentication() throws Exception {
-        // Meaningful only because the real SecurityConfig is loaded: /api/v1/auth/** is permitted,
-        // so this asserts /me is the exception and is genuinely protected.
+        // Meaningful only because the real SecurityConfig is loaded: /api/v1/auth/** is permitted, so this
+        // asserts /me is the exception and is genuinely protected.
         mockMvc.perform(get("/api/v1/auth/me"))
                 .andExpect(status().isUnauthorized());
     }
@@ -331,9 +314,7 @@ class AuthControllerErrorMappingTest {
 
     @Test
     void logoutSucceedsEvenWithAnAlreadyDeadToken() throws Exception {
-        // The service deliberately does not throw for an unresolvable token. Asserted here
-        // because a 401 from logout would leave a client that lost the response unable to
-        // sign out.
+        // The service deliberately does not throw for an unresolvable token.
         doNothing().when(authService).logout(any(), any(), any());
 
         mockMvc.perform(post("/api/v1/auth/logout")
@@ -361,8 +342,8 @@ class AuthControllerErrorMappingTest {
                 .andExpect(jsonPath("$.traceId").isNotEmpty())
                 .andReturn().getResponse().getContentAsString();
 
-        // The message names internal paths and must not leak, but the trace id must be present so
-        // the failure is correlatable.
+        // The message names internal paths and must not leak, but the trace id must be present so the
+        // failure is correlatable.
         assertThat(body)
                 .doesNotContain("connection pool exhausted")
                 .doesNotContain("/var/run/x.sock")
@@ -371,10 +352,7 @@ class AuthControllerErrorMappingTest {
 
     @Test
     void anUnknownPathIs404ForAnAuthenticatedCaller() throws Exception {
-        // Authenticated deliberately. Every route in this service requires a token, so an
-        // anonymous request is stopped by the security layer and never reaches routing - which
-        // means the 404 handler is only reachable with a token, and only this test can prove it
-        // is mapped correctly.
+        // Authenticated deliberately. Every route in this service requires a token
         mockMvc.perform(get("/api/v1/nope").with(authenticatedAs("user-1")))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("not-found"));
@@ -382,9 +360,8 @@ class AuthControllerErrorMappingTest {
 
     @Test
     void anUnknownPathUnderAuthIs401RatherThan404() throws Exception {
-        // Deliberate. The whole /api/v1/auth prefix requires authentication, so an anonymous
-        // caller cannot map out which auth routes exist. A 404 here would confirm that
-        // /api/v1/auth/reset-password does not exist, which is information worth withholding.
+        // Deliberate. The whole /api/v1/auth prefix requires authentication, so an anonymous caller cannot
+        // map out which auth routes exist.
         mockMvc.perform(get("/api/v1/auth/nope"))
                 .andExpect(status().isUnauthorized());
     }

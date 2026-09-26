@@ -5,13 +5,7 @@ import org.springframework.http.HttpStatus;
 
 import java.io.IOException;
 
-/**
- * Writes a problem document from inside a servlet filter.
- *
- * <p>Filters run before {@code @RestControllerAdvice}, so an error raised here has no handler to
- * catch it. The body shape matches what the services emit, so a client sees one error format no
- * matter which hop rejected it.
- */
+/** Writes a problem document from inside a servlet filter. */
 public final class ProblemWriter {
 
     private ProblemWriter() {
@@ -28,12 +22,7 @@ public final class ProblemWriter {
                 .formatted(escape(code), statusCode, escape(code), escape(detail)));
     }
 
-    /**
-     * Escapes for a JSON string literal.
-     * <p>
-     * Detail can quote caller input, and an unescaped quote yields a malformed body at best and
-     * reflected content at worst.
-     */
+    /** Escapes for a JSON string literal. */
     static String escape(String value) {
         if (value == null) {
             return "";

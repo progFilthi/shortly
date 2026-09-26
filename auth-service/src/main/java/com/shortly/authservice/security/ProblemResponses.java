@@ -5,16 +5,8 @@ import org.springframework.http.HttpStatus;
 
 import java.io.IOException;
 
-/**
- * Writes a problem response from inside a servlet filter.
- *
- * <p>Filters run before {@code @RestControllerAdvice}, so an error raised here has no handler to
- * catch it. This produces the same body shape the handler does, so a client sees one error format
- * whether the failure came from a filter or a controller.
- * <p>
- * Hand-rolled rather than delegating to Spring MVC, because forwarding to
- * {@code /error} from a filter to get a body is more machinery than the problem warrants.
- */
+/** Writes a problem response from inside a servlet filter. Hand-rolled rather than delegating to
+ * than the problem warrants. */
 public final class ProblemResponses {
 
     private ProblemResponses() {
@@ -31,13 +23,7 @@ public final class ProblemResponses {
                 .formatted(escape(code), statusCode, escape(code), escape(detail)));
     }
 
-    /**
-     * Escapes a value for embedding in a JSON string literal.
-     * <p>
-     * Error detail can quote caller input - a rejected token, an identifier from a request body -
-     * and an unescaped quote would produce a malformed body at best and reflected content at
-     * worst.
-     */
+    /** Escapes a value for embedding in a JSON string literal. */
     public static String escape(String value) {
         if (value == null) {
             return "";

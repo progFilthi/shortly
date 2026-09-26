@@ -15,19 +15,8 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 
-/**
- * Refuses any request that did not arrive through the gateway.
- *
- * <p>Every service behind the gateway trusts {@code X-User-Id} because the gateway sets it from a
- * verified token. That trust is only sound while the gateway is the only way in. If a service
- * port is reachable directly - a container network, a misconfigured security group, a developer
- * with curl - a caller can set that header to anyone and read or modify their data. Requiring a
- * shared secret the gateway strips from inbound traffic closes it.
- *
- * <p>Runs before {@link JwtAuthenticationFilter} so an unsigned request is rejected without any
- * token parsing done on it. Constructed by {@code SecurityConfig} rather than component-scanned,
- * for the same reason as that filter: the security chain is the only registration point.
- */
+/** Refuses any request that did not arrive through the gateway. Every service behind the gateway
+ * trusts {@code X-User-Id} because the gateway sets it from a verified token. */
 public class GatewaySecretFilter extends OncePerRequestFilter {
 
     private final AuthProperties properties;
@@ -36,14 +25,7 @@ public class GatewaySecretFilter extends OncePerRequestFilter {
         this.properties = properties;
     }
 
-    /**
-     * Actuator is exempt.
-     * <p>
-     * The container health check runs inside the container and has no way to present the gateway
-     * secret, so applying the check to actuator would make every instance report unhealthy and be
-     * restarted forever. In production actuator belongs on a separate management port with its own
-     * network policy; exempting it here keeps the local stack honest.
-     */
+    /** Actuator is exempt. */
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         return request.getRequestURI().startsWith("/actuator");
@@ -59,9 +41,8 @@ public class GatewaySecretFilter extends OncePerRequestFilter {
             return;
         }
 
-        // The gateway cannot prove its own identity, and neither can this filter, so both sides
-        // are configured with the same secret. Deliberately not a JWT: this check is "did the
-        // request come from inside", not "who sent it".
+        // The gateway cannot prove its own identity, and neither can this filter, so both sides are
+        // configured with the same secret. Deliberately not a JWT:
         String presented = request.getHeader(InternalHeaders.GATEWAY_SECRET);
 
         if (!secretsMatch(presented, properties.gatewaySecret())) {
@@ -73,13 +54,7 @@ public class GatewaySecretFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    /**
-     * Constant-time comparison.
-     * <p>
-     * A naive {@code equals} short-circuits on the first differing byte, so an attacker can
-     * discover the secret one character at a time by measuring how long the rejection takes.
-     * {@link MessageDigest#isEqual} does not, and on a short value the cost is irrelevant.
-     */
+    /** Constant-time comparison. */
     private static boolean secretsMatch(String presented, String expected) {
         if (presented == null || expected == null || expected.isBlank()) {
             return false;

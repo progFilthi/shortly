@@ -10,9 +10,7 @@ spring:
     gateway:
       server:
         webmvc:
-          # The gateway is the only public entry point. No route exposes a service that has no
-          # route, and every route to a service carries the internal secret so the service can
-          # reject anything that did not come through here. localhost: services run on the host.
+          # The gateway is the only public entry point.
           routes:
             - id: auth-service
               uri: ${AUTH_SERVICE_URI:http://localhost:8081}
@@ -56,8 +54,8 @@ management:
         include: health,gateway,info
   endpoint:
     health:
-      # /actuator/health/readiness is what the container health check calls. Without the probes
-      # group enabled that path does not exist and every instance is reported unhealthy.
+      # /actuator/health/readiness is what the container health check calls. Without the probes group
+      # enabled that path does not exist and every instance is reported unhealthy.
       probes:
         enabled: true
       show-details: never
@@ -65,7 +63,6 @@ management:
 gateway:
   # Distinct from the JWT signing key. Sharing one would mean a leaked signing key also lets an
   # attacker forge the gateway header and impersonate any user id to internal services.
-  # Dev-only default. Must be overridden outside a laptop, and must match auth-service's.
   internal-secret: ${GATEWAY_INTERNAL_SECRET:dev-only-internal-secret}
   jwt-issuer: shortly
 

@@ -13,12 +13,8 @@ import static com.shortly.transcoderservice.transcode.TranscodeFixtures.producti
 import static com.shortly.transcoderservice.transcode.TranscodeFixtures.threeRungs;
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * The command string is the contract with ffmpeg, and a malformed one fails only at runtime, in
- * production, on the first real video. These assertions pin the three constraints that are easy
- * to get wrong and impossible to diagnose from a log: the audio branch, the per-variant stream
- * indices, and the aligned keyframes.
- */
+/** The command string is the contract with ffmpeg, and a malformed one fails only at runtime, in
+ * production, on the first real video. */
 class HlsCommandBuilderTest {
 
     private static final Path SOURCE = Path.of("/work/source.mp4");
@@ -66,9 +62,8 @@ class HlsCommandBuilderTest {
 
     @Test
     void givesEveryVariantItsOwnAudioStreamIndex() {
-        // Reusing one index across variants makes ffmpeg abort with "Same elementary stream
-        // found more than once in two different variant definitions". This is the single most
-        // easily reintroduced bug in this file, so it is asserted explicitly.
+        // Reusing one index across variants makes ffmpeg abort with "Same elementary stream found more
+        // than once in two different variant definitions".
         List<String> command = build(productionDefaults(), metadata(true, false), threeRungs());
 
         assertThat(optionOf(command, "-var_stream_map")).isEqualTo("v:0,a:0 v:1,a:1 v:2,a:2");
@@ -76,9 +71,7 @@ class HlsCommandBuilderTest {
 
     @Test
     void synthesisesSilenceRatherThanReferencingAMissingAudioStream() {
-        // A video with no audio stream is normal, not an edge case. Referencing [0:a] when there
-        // is none aborts the whole filtergraph with "matches no streams", so the audio branch
-        // must be built conditionally on the probe result.
+        // A video with no audio stream is normal, not an edge case. Referencing [0:
         List<String> command = build(productionDefaults(), metadata(false, false), threeRungs());
 
         String graph = graphOf(command);
@@ -91,8 +84,8 @@ class HlsCommandBuilderTest {
     void forcesAlignedConstantGopKeyframesForEveryRung() {
         List<String> command = build(productionDefaults(), metadata(true, false), threeRungs());
 
-        // 2s segments at 30fps is a 60-frame GOP on every rendition, with scene-cut keyframes
-        // disabled, so segment boundaries line up across renditions and ABR switching is clean.
+        // 2s segments at 30fps is a 60-frame GOP on every rendition, with scene-cut keyframes disabled, so
+        // segment boundaries line up across renditions and ABR switching is clean.
         assertThat(optionOf(command, "-g")).isEqualTo("60");
         assertThat(optionOf(command, "-keyint_min")).isEqualTo("60");
         assertThat(optionOf(command, "-sc_threshold")).isEqualTo("0");
@@ -126,8 +119,8 @@ class HlsCommandBuilderTest {
     void neverUpsamplesAFrameRate() {
         String graph = graphOf(build(productionDefaults(), metadata(true, false, 24d), threeRungs()));
 
-        // A 24fps source stays 24fps. Duplicating frames up to 30 would inflate bitrate for no
-        // visible gain.
+        // A 24fps source stays 24fps. Duplicating frames up to 30 would inflate bitrate for no visible
+        // gain.
         assertThat(graph).contains("fps=24,").doesNotContain("fps=30,");
     }
 
@@ -150,8 +143,8 @@ class HlsCommandBuilderTest {
 
     @Test
     void stopsAtTheShortestStreamSoThereIsNoPaddedTail() {
-        // -short is not a valid ffmpeg option; -shortest is. Getting this wrong fails every job,
-        // and the integration test is what catches it.
+        // -short is not a valid ffmpeg option; -shortest is. Getting this wrong fails every job, and the
+        // integration test is what catches it.
         List<String> command = build(productionDefaults(), metadata(true, false), threeRungs());
 
         assertThat(command).contains("-shortest").doesNotContain("-short");

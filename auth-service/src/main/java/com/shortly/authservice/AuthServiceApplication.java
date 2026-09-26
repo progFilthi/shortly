@@ -18,13 +18,8 @@ public class AuthServiceApplication {
         SpringApplication.run(AuthServiceApplication.class, args);
     }
 
-    /**
-     * A single injected clock.
-     * <p>
-     * Token expiry and account lockouts are both time-dependent, and reading
-     * {@code Instant.now()} inline would make them impossible to test without sleeping. One bean
-     * that tests can substitute with a fixed clock removes that whole problem.
-     */
+    /** A single injected clock. Token expiry and account lockouts are both time-dependent, and reading
+     * {@code Instant.now()} inline would make them impossible to test without sleeping. */
     @Bean
     public Clock clock() {
         return Clock.systemUTC();

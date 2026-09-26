@@ -1,12 +1,7 @@
 package com.shortly.jwt;
 
-/**
- * Claim names and token kinds.
- *
- * <p>Shared so the issuer and the verifier cannot disagree about what a token is. The
- * {@link #TOKEN_TYPE} claim is the important one: it is what stops a token minted for one purpose
- * being replayed as another.
- */
+/** Claim names and token kinds. Shared so the issuer and the verifier cannot disagree about what a
+ * token is. */
 public final class JwtClaims {
 
     /** Marks a token as an access token. Checked on every verification. */

@@ -16,25 +16,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Startup preflight for the ffmpeg build.
- * <p>
- * A missing filter or encoder is otherwise discovered by the first job that needs it, which means
- * the first HDR upload, or the first 1080p upload, fails in production rather than at deploy
- * time. Refusing to start is the difference between a failed rollout and a silent, partial
- * outage.
- * <p>
- * Capabilities are probed individually with {@code ffmpeg -h <type>=<name>} and identified by
- * their help header, rather than by scraping the aligned tables that {@code -filters} and
- * {@code -encoders} print. Two reasons: the flag column in those tables is not a fixed width
- * (it is {@code " .. "} for a filter, {@code "D d"} for a demuxer, {@code "V....D"} for an
- * encoder) and has changed between ffmpeg releases, so any column- or token-based parse is
- * quietly wrong after an upgrade; and {@code ffmpeg -h} exits 0 whether or not the capability
- * exists, so the only reliable signal is the help text itself.
- * <p>
- * Also records the exact ffmpeg version, which is the first thing anyone asks about when a
- * ladder comes out different from expected.
- */
+/** Startup preflight for the ffmpeg build. A missing filter or encoder is otherwise discovered by
+ * in production rather than at deploy time. */
 @Component
 public class FfmpegCapabilities {
 
@@ -86,8 +69,8 @@ public class FfmpegCapabilities {
                             + " later, when only some uploads would break.");
         }
 
-        // ffprobe ships in the same apk package as ffmpeg, but confirm the binary is actually
-        // on PATH rather than assuming the package layout holds.
+        // ffprobe ships in the same apk package as ffmpeg, but confirm the binary is actually on PATH
+        // rather than assuming the package layout holds.
         capture(List.of(properties.ffprobePath(), "-version"));
 
         log.info("ffmpeg preflight passed: {} filters, {} encoders, {} muxers, {} demuxers verified",
@@ -103,12 +86,8 @@ public class FfmpegCapabilities {
         return (newline > 0 ? output.substring(0, newline) : output).strip();
     }
 
-    /**
-     * Runs a capability query and returns its output.
-     * <p>
-     * A non-zero exit is only fatal when the binary could not be run at all. {@code ffmpeg -h}
-     * for an unknown capability exits 0 and prints a diagnostic, which {@link #verify} reads.
-     */
+    /** Runs a capability query and returns its output. A non-zero exit is only fatal when the binary
+     * diagnostic, which {@link #verify} reads. */
     private String capture(List<String> command) {
         try {
             Process process = new ProcessBuilder(command)

@@ -32,10 +32,7 @@
         <jjwt.version>0.13.0</jjwt.version>
     </properties>
     <dependencies>
-        <!--
-            Shared token verification. The gateway and the auth service must enforce identical
-            rules, so both use this codec rather than each having their own.
-        -->
+        <!-- Shared token verification. The gateway and the auth service must enforce identical rules, so both use this codec rather than each having their own. -->
         <dependency>
             <groupId>com.shortly</groupId>
             <artifactId>common-jwt</artifactId>
@@ -52,10 +49,7 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
-        <!--
-            Liveness and readiness. Without it /actuator/health does not exist, so the container
-            health check 404s and the gateway is restarted in a loop while working perfectly well.
-        -->
+        <!-- Liveness and readiness. Without it /actuator/health does not exist, so the container health check 404s and the gateway is restarted in a loop while working perfectly well. -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
@@ -124,12 +118,7 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
-                    <!--
-                        Lombok must be an explicit annotation processor path. Discovery from the
-                        classpath is unreliable on JDK 23+, and the failure is silent: the
-                        annotations generate nothing and every generated member becomes a compile
-                        error somewhere unrelated.
-                    -->
+                    <!-- Lombok must be an explicit annotation processor path. Discovery from the classpath is unreliable on JDK 23+, and the failure is silent: the annotations generate nothing and every generated member becomes a compile error somewhere unrelated. -->
                     <annotationProcessorPaths>
                         <path>
                             <groupId>org.projectlombok</groupId>
