@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.shortly</groupId>
+        <artifactId>shortly</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+    </parent>
+    <artifactId>common-contracts</artifactId>
+    <name>common-contracts</name>
+    <description>
+        Shared-kernel wire contracts (event records and topology constants only).
+        Contains ZERO service logic and ZERO framework dependencies, so that services
+        may depend on the contract without depending on each other.
+    </description>
+
+    <properties>
+        <java.version>25</java.version>
+        <maven.compiler.release>25</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <dependencies>
+        <!--
+            Intentionally no Spring, no Jackson, no AMQP, no AWS.
+            Adding any of these would turn a contract module into a coupling vector.
+            Records and plain enums only.
+        -->
+    </dependencies>
+
+</project>

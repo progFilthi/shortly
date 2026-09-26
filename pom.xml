@@ -10,6 +10,15 @@
     <description>Shortly - Short Video Platform</description>
 
     <modules>
+        <!--
+            common-contracts and common-jwt build first: they are the shared kernel that the
+            services compile against. Contracts carry the wire format with no behaviour; the jwt
+            module carries behaviour both the token issuer and the token verifier must perform
+            identically.
+        -->
+        <module>common-contracts</module>
+        <module>common-jwt</module>
+
         <module>api-gateway</module>
         <module>auth-service</module>
         <module>feed-service</module>
