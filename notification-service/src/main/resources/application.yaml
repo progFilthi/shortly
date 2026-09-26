@@ -1,3 +1,6 @@
 spring:
   application:
     name: notification-service
+
+server:
+  port: 8086 # Matches the gateway's notification route; 8080 is the gateway's.

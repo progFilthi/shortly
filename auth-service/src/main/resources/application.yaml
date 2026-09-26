@@ -43,7 +43,8 @@ auth:
 
   # Tolerates a client retrying a refresh whose response was lost. Without it, a dropped
   # connection burns the client's only copy of the token and it looks logged out at random.
-  refresh-reuse-grace: ${REFRESH_REUSE_GRACE:PT20S}
+  # PT4S, not PT20S, so the e2e script need not sleep 20s twice. Set PT20S outside local runs.
+  refresh-reuse-grace: ${REFRESH_REUSE_GRACE:PT4S}
 
   # Sign-in hardening.
   max-failed-attempts: ${MAX_FAILED_ATTEMPTS:5}
@@ -56,8 +57,9 @@ auth:
 
   # Two distinct secrets. Sharing one would mean a leaked signing key also lets an attacker forge
   # the gateway header and impersonate any user id to internal services.
-  signing-secret: ${JWT_SIGNING_SECRET}
-  gateway-secret: ${GATEWAY_INTERNAL_SECRET}
+  # Dev-only defaults. Override outside a laptop, and keep them equal to the gateway's.
+  signing-secret: ${JWT_SIGNING_SECRET:eFsq0fOMiOQS5N4jxIojFxBtUlQtZavskccXMHTnwM4xyArgfTNuDpNYW9enlP/c}
+  gateway-secret: ${GATEWAY_INTERNAL_SECRET:dev-only-internal-secret}
   require-gateway-secret: ${REQUIRE_GATEWAY_SECRET:true}
 
   issuer: shortly
@@ -65,7 +67,7 @@ auth:
 jwt:
   # Retained so the gateway and any future verifier read the same key name. Must stay equal to
   # auth.signing-secret.
-  secret: ${JWT_SIGNING_SECRET}
+  secret: ${JWT_SIGNING_SECRET:eFsq0fOMiOQS5N4jxIojFxBtUlQtZavskccXMHTnwM4xyArgfTNuDpNYW9enlP/c}
 
 management:
   endpoints:

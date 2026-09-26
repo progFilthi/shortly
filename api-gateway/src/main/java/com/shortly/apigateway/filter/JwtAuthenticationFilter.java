@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpServletRequestWrapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpHeaders;
@@ -39,6 +40,7 @@ import java.util.Set;
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE + 10)
 @RequiredArgsConstructor
+@Slf4j
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     /**
@@ -91,6 +93,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (!verification.succeeded()) {
             // Both are 401, but the codes differ and the client needs the difference: an expired
             // token means "refresh and retry", an invalid one means "sign in again".
+            // Logged because this is the only place a 401 is visible; never log the token itself.
+            log.warn("Rejected access token on {} {}: {}", request.getMethod(),
+                    request.getRequestURI(), verification.failure());
             if (verification.failure() == JwtCodec.FailureReason.EXPIRED) {
                 ProblemWriter.write(response, HttpStatus.UNAUTHORIZED, "token-expired",
                         "Access token has expired. Refresh and retry.");

@@ -3,10 +3,11 @@ spring:
     name: transcoder-service
 
   rabbitmq:
-    host: ${RABBITMQ_HOST}
+    # localhost, not `rabbitmq`: that name only resolves inside the Compose network.
+    host: ${RABBITMQ_HOST:localhost}
     port: ${RABBITMQ_PORT:5672}
-    username: ${RABBITMQ_USER}
-    password: ${RABBITMQ_PASSWORD}
+    username: ${RABBITMQ_USER:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
     # Publisher confirms: without these, convertAndSend returns successfully even when the
     # broker never durably accepted the message, and a video silently stays in PROCESSING
     # forever. Combined with mandatory=true in TranscoderMessagingConfig.
@@ -25,10 +26,12 @@ spring:
     timeout-per-shutdown-phase: 45s
 
 aws:
-  region: ${AWS_REGION}
+  region: ${AWS_REGION:us-east-1}
   credentials:
-    access-key: ${AWS_ACCESS_KEY_ID}
-    secret-key: ${AWS_SECRET_ACCESS_KEY}
+    access-key: ${AWS_ACCESS_KEY_ID:test}
+    secret-key: ${AWS_SECRET_ACCESS_KEY:test}
+  # Empty this against real AWS, where the endpoint comes from aws.region instead.
+  endpoint-url: ${AWS_ENDPOINT_URL:http://localhost:4566}
 
 transcoder:
 
@@ -61,7 +64,8 @@ transcoder:
   # A 60s 6-rung ladder takes ~16s wall on 10 vCPU and ~60s on 4 vCPU. This budget is
   # roughly 6x the expected worst case, so it only fires on a genuinely stuck process.
   job-timeout: 10m
-  work-dir: ${TRANSCODER_WORK_DIR:/work}
+  # Not /work: that was a container tmpfs mount and does not exist on a host.
+  work-dir: ${TRANSCODER_WORK_DIR:${java.io.tmpdir}/shortly-transcoder}
 
   # --------------------------------- upload ----------------------------------
   upload-concurrency: 24
@@ -90,8 +94,8 @@ transcoder:
     retry-max-interval: PT2M
 
   storage:
-    bucket-name: ${AWS_S3_BUCKET}
-    cdn-domain: ${CDN_DOMAIN}
+    bucket-name: ${AWS_S3_BUCKET:shortly-videos-bucket}
+    cdn-domain: ${CDN_DOMAIN:http://localhost:4566/shortly-videos-bucket}
     output-prefix: hls
     max-connections: 32
     # Segments are immutable and content-addressed, so cache them essentially forever.
@@ -101,7 +105,8 @@ transcoder:
     playlist-cache-control: public, max-age=31536000, immutable
 
 server:
-  port: 8080
+  # 8085, not 8080: the gateway owns 8080 and host ports must be unique.
+  port: 8085
   shutdown: graceful
 
 management:

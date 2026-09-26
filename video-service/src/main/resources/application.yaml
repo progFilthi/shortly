@@ -7,9 +7,10 @@ spring:
     name: video-service
 
   datasource:
-    url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/video_db
-    username: ${DB_USER}
-    password: ${DB_PASSWORD}
+    # localhost, not `postgres`: that name only resolves inside the Compose network.
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/video_db
+    username: ${DB_USER:shortly_admin}
+    password: ${DB_PASSWORD:shortly_password}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -44,10 +45,11 @@ spring:
     baseline-version: 1
 
   rabbitmq:
-    host: ${RABBITMQ_HOST}
+    # localhost: `rabbitmq` only resolves inside the Compose network.
+    host: ${RABBITMQ_HOST:localhost}
     port: ${RABBITMQ_PORT:5672}
-    username: ${RABBITMQ_USER}
-    password: ${RABBITMQ_PASSWORD}
+    username: ${RABBITMQ_USER:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
     # Without confirms, confirmUploadComplete returns 202 even when the broker never durably
     # accepted the event, and the video sits in PROCESSING forever with no job to run.
     publisher-confirm-type: correlated
@@ -65,14 +67,16 @@ spring:
       max-request-size: 1MB
 
 aws:
-  region: ${AWS_REGION}
+  region: ${AWS_REGION:us-east-1}
   credentials:
-    access-key: ${AWS_ACCESS_KEY_ID}
-    secret-key: ${AWS_SECRET_ACCESS_KEY}
+    access-key: ${AWS_ACCESS_KEY_ID:test}
+    secret-key: ${AWS_SECRET_ACCESS_KEY:test}
+  # Empty this against real AWS, where the endpoint comes from aws.region instead.
+  endpoint-url: ${AWS_ENDPOINT_URL:http://localhost:4566}
 
 video:
-  bucket-name: ${AWS_S3_BUCKET}
-  cdn-domain: ${CDN_DOMAIN}
+  bucket-name: ${AWS_S3_BUCKET:shortly-videos-bucket}
+  cdn-domain: ${CDN_DOMAIN:http://localhost:4566/shortly-videos-bucket}
   source-prefix: raw
   processed-prefix: hls
   # Ceiling on an uploaded original. Generous because the intended path is that the client
@@ -86,8 +90,8 @@ video:
 gateway:
   # Distinct from the JWT signing key. The gateway adds this to every routed request and this
   # service requires it, so a caller reaching this port directly cannot assert an identity.
-  # It must be equal to the gateway's gateway.internal-secret.
-  internal-secret: ${GATEWAY_INTERNAL_SECRET}
+  # Must equal the gateway's gateway.internal-secret. Dev-only default.
+  internal-secret: ${GATEWAY_INTERNAL_SECRET:dev-only-internal-secret}
   require-secret: ${REQUIRE_GATEWAY_SECRET:true}
 
 management:

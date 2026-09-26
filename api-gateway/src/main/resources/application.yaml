@@ -12,7 +12,7 @@ spring:
         webmvc:
           # The gateway is the only public entry point. No route exposes a service that has no
           # route, and every route to a service carries the internal secret so the service can
-          # reject anything that did not come through here.
+          # reject anything that did not come through here. localhost: services run on the host.
           routes:
             - id: auth-service
               uri: ${AUTH_SERVICE_URI:http://localhost:8081}
@@ -65,12 +65,13 @@ management:
 gateway:
   # Distinct from the JWT signing key. Sharing one would mean a leaked signing key also lets an
   # attacker forge the gateway header and impersonate any user id to internal services.
-  internal-secret: ${GATEWAY_INTERNAL_SECRET}
+  # Dev-only default. Must be overridden outside a laptop, and must match auth-service's.
+  internal-secret: ${GATEWAY_INTERNAL_SECRET:dev-only-internal-secret}
   jwt-issuer: shortly
 
 jwt:
   # Same key auth-service signs with; the shared JwtCodec enforces identical verification.
-  secret: ${JWT_SIGNING_SECRET}
+  secret: ${JWT_SIGNING_SECRET:eFsq0fOMiOQS5N4jxIojFxBtUlQtZavskccXMHTnwM4xyArgfTNuDpNYW9enlP/c}
 
 logging:
   level:

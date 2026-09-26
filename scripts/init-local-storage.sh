@@ -1,15 +1,18 @@
 #!/bin/sh
-# Idempotent local object-storage bootstrap.
-#
-# Run as a one-shot compose job. Kept as a file rather than an inline entrypoint because
-# multi-line shell inside a YAML folded scalar gets re-joined unpredictably, and a CORS policy
-# that fails to apply is an upload failure that only shows up in a browser console.
+# Idempotent local object-storage bootstrap: creates the upload bucket and applies the CORS rule
+# the presigned browser PUT needs. Needs the AWS CLI; LocalStack is not a Compose service.
 
 set -eu
 
-ENDPOINT="${S3_ENDPOINT:-http://localstack:4566}"
+ENDPOINT="${S3_ENDPOINT:-http://localhost:4566}"
 BUCKET="${S3_BUCKET:-shortly-videos-bucket}"
-CORS_FILE="${CORS_FILE:-/cors.json}"
+REPO_ROOT="${REPO_ROOT:-$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)}"
+CORS_FILE="${CORS_FILE:-${REPO_ROOT}/docs/s3-cors.json}"
+
+if [ ! -f "${CORS_FILE}" ]; then
+    echo "CORS policy not found at ${CORS_FILE}" >&2
+    exit 1
+fi
 
 echo "Ensuring bucket ${BUCKET} exists at ${ENDPOINT}"
 if aws --endpoint-url="${ENDPOINT}" s3 mb "s3://${BUCKET}" 2>/dev/null; then
