@@ -1,0 +1,11 @@
+# Test-only overrides.
+#
+# Supplies a signing key long enough for HS256. JwtCodec rejects a short or non-Base64 secret at
+# construction - deliberately, so a misconfigured deployment fails at startup rather than on the
+# first request - which means the context test has to provide a real one.
+jwt:
+  secret: dGVzdC1vbmx5LXNpZ25pbmcta2V5LWZvci11bml0LXRlc3RzLW1hdC1iZS1sb25n
+
+gateway:
+  internal-secret: test-gateway-secret
+  jwt-issuer: shortly-test
