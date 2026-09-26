@@ -4,7 +4,7 @@ import SwiftUI
 struct ProfileView: View {
     @EnvironmentObject private var appModel: AppModel
     @State private var selectedVideo: Video?
-    @State private var confirmsSessionReset = false
+    @State private var confirmsSignOut = false
 
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 2), count: 3)
 
@@ -23,10 +23,10 @@ struct ProfileView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Reset") {
-                        confirmsSessionReset = true
+                    Button("Sign out") {
+                        confirmsSignOut = true
                     }
-                    .accessibilityIdentifier("profile.reset")
+                    .accessibilityIdentifier("profile.signOut")
                 }
             }
             .refreshable {
@@ -40,18 +40,23 @@ struct ProfileView: View {
             .sheet(item: $selectedVideo) { video in
                 VideoDetailView(video: video)
             }
-            .confirmationDialog(
-                "Forget this device session?",
-                isPresented: $confirmsSessionReset,
-                titleVisibility: .visible
-            ) {
-                Button("Forget session", role: .destructive) {
-                    appModel.clearSession()
-                }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("The current backend has no server-side logout, so the token remains valid until it expires.")
+        }
+        // Attached to the NavigationStack rather than the ScrollView inside it. With
+        // both this and a .sheet on the same view, only one of them presents reliably
+        // and the sign-out confirmation silently never appears.
+        .confirmationDialog(
+            "Sign out?",
+            isPresented: $confirmsSignOut,
+            titleVisibility: .visible
+        ) {
+            Button("Sign out", role: .destructive) {
+                Task { await appModel.signOut() }
             }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            // Worth saying plainly: this revokes the refresh token server-side, so
+            // a copy taken from the Keychain is dead rather than merely unused.
+            Text("Your refresh token is revoked on the server, so this device cannot be used to restore the session.")
         }
     }
 
@@ -84,12 +89,15 @@ struct ProfileView: View {
                 statistic(value: 0, label: "Following")
             }
 
-            Text("Prototype profile")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
-                .background(.white.opacity(0.08), in: Capsule())
+            if let count = appModel.profile?.activeSessionCount {
+                Text("\(count) active session\(count == 1 ? "" : "s")")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(.white.opacity(0.08), in: Capsule())
+                    .accessibilityIdentifier("profile.sessions")
+            }
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 18)

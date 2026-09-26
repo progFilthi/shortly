@@ -14,16 +14,20 @@
 		000000000000000000000044 /* APIModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000104 /* APIModels.swift */; };
 		000000000000000000000045 /* SelectedMovie.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000105 /* SelectedMovie.swift */; };
 		000000000000000000000046 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000106 /* APIClient.swift */; };
+		000000000000000000000200 /* APIClientError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000201 /* APIClientError.swift */; };
+		000000000000000000000202 /* SessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000203 /* SessionManager.swift */; };
 		000000000000000000000047 /* VideoUploader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000107 /* VideoUploader.swift */; };
 		000000000000000000000048 /* SessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000108 /* SessionStore.swift */; };
-		000000000000000000000049 /* RegistrationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000109 /* RegistrationView.swift */; };
+		000000000000000000000049 /* AuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000109 /* AuthView.swift */; };
 		000000000000000000000050 /* FeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000110 /* FeedView.swift */; };
 		000000000000000000000051 /* LoopingPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000111 /* LoopingPlayerView.swift */; };
 		000000000000000000000052 /* UploadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000112 /* UploadView.swift */; };
 		000000000000000000000053 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000113 /* ProfileView.swift */; };
-		000000000000000000000054 /* APIClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000120 /* APIClientTests.swift */; };
+		000000000000000000000054 /* AuthTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000120 /* AuthTests.swift */; };
+		000000000000000000000400 /* LiveBackendTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000401 /* LiveBackendTests.swift */; };
 		000000000000000000000055 /* SessionStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000121 /* SessionStoreTests.swift */; };
 		000000000000000000000056 /* ShortlyUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000130 /* ShortlyUITests.swift */; };
+		000000000000000000000500 /* LiveAuthUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000501 /* LiveAuthUITests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -54,17 +58,21 @@
 		000000000000000000000104 /* APIModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIModels.swift; sourceTree = "<group>"; };
 		000000000000000000000105 /* SelectedMovie.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectedMovie.swift; sourceTree = "<group>"; };
 		000000000000000000000106 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
+		000000000000000000000201 /* APIClientError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClientError.swift; sourceTree = "<group>"; };
+		000000000000000000000203 /* SessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionManager.swift; sourceTree = "<group>"; };
 		000000000000000000000107 /* VideoUploader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoUploader.swift; sourceTree = "<group>"; };
 		000000000000000000000108 /* SessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStore.swift; sourceTree = "<group>"; };
-		000000000000000000000109 /* RegistrationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegistrationView.swift; sourceTree = "<group>"; };
+		000000000000000000000109 /* AuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthView.swift; sourceTree = "<group>"; };
 		000000000000000000000110 /* FeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedView.swift; sourceTree = "<group>"; };
 		000000000000000000000111 /* LoopingPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoopingPlayerView.swift; sourceTree = "<group>"; };
 		000000000000000000000112 /* UploadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadView.swift; sourceTree = "<group>"; };
 		000000000000000000000113 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
 		000000000000000000000114 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		000000000000000000000120 /* APIClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClientTests.swift; sourceTree = "<group>"; };
+		000000000000000000000120 /* AuthTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthTests.swift; sourceTree = "<group>"; };
+		000000000000000000000401 /* LiveBackendTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveBackendTests.swift; sourceTree = "<group>"; };
 		000000000000000000000121 /* SessionStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStoreTests.swift; sourceTree = "<group>"; };
 		000000000000000000000130 /* ShortlyUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShortlyUITests.swift; sourceTree = "<group>"; };
+		000000000000000000000501 /* LiveAuthUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveAuthUITests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -150,7 +158,9 @@
 			isa = PBXGroup;
 			children = (
 				000000000000000000000106 /* APIClient.swift */,
-				000000000000000000000107 /* VideoUploader.swift */,
+
+				000000000000000000000201 /* APIClientError.swift */,
+				000000000000000000000203 /* SessionManager.swift */,				000000000000000000000107 /* VideoUploader.swift */,
 			);
 			path = Networking;
 			sourceTree = "<group>";
@@ -177,7 +187,7 @@
 		00000000000000000000000A /* Auth */ = {
 			isa = PBXGroup;
 			children = (
-				000000000000000000000109 /* RegistrationView.swift */,
+				000000000000000000000109 /* AuthView.swift */,
 			);
 			path = Auth;
 			sourceTree = "<group>";
@@ -225,8 +235,9 @@
 		000000000000000000000010 /* ShortlyTests */ = {
 			isa = PBXGroup;
 			children = (
-				000000000000000000000120 /* APIClientTests.swift */,
+				000000000000000000000120 /* AuthTests.swift */,
 				000000000000000000000121 /* SessionStoreTests.swift */,
+				000000000000000000000401 /* LiveBackendTests.swift */,
 			);
 			path = ShortlyTests;
 			sourceTree = "<group>";
@@ -235,6 +246,7 @@
 			isa = PBXGroup;
 			children = (
 				000000000000000000000130 /* ShortlyUITests.swift */,
+				000000000000000000000501 /* LiveAuthUITests.swift */,
 			);
 			path = ShortlyUITests;
 			sourceTree = "<group>";
@@ -374,9 +386,11 @@
 				000000000000000000000044 /* APIModels.swift in Sources */,
 				000000000000000000000045 /* SelectedMovie.swift in Sources */,
 				000000000000000000000046 /* APIClient.swift in Sources */,
-				000000000000000000000047 /* VideoUploader.swift in Sources */,
+
+				000000000000000000000200 /* APIClientError.swift in Sources */,
+				000000000000000000000202 /* SessionManager.swift in Sources */,				000000000000000000000047 /* VideoUploader.swift in Sources */,
 				000000000000000000000048 /* SessionStore.swift in Sources */,
-				000000000000000000000049 /* RegistrationView.swift in Sources */,
+				000000000000000000000049 /* AuthView.swift in Sources */,
 				000000000000000000000050 /* FeedView.swift in Sources */,
 				000000000000000000000051 /* LoopingPlayerView.swift in Sources */,
 				000000000000000000000052 /* UploadView.swift in Sources */,
@@ -388,7 +402,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				000000000000000000000054 /* APIClientTests.swift in Sources */,
+				000000000000000000000054 /* AuthTests.swift in Sources */,
+				000000000000000000000400 /* LiveBackendTests.swift in Sources */,
 				000000000000000000000055 /* SessionStoreTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -398,6 +413,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				000000000000000000000056 /* ShortlyUITests.swift in Sources */,
+				000000000000000000000500 /* LiveAuthUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
