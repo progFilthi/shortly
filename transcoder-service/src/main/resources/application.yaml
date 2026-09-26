@@ -1,3 +1,129 @@
 spring:
   application:
     name: transcoder-service
+
+  rabbitmq:
+    host: ${RABBITMQ_HOST}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER}
+    password: ${RABBITMQ_PASSWORD}
+    # Publisher confirms: without these, convertAndSend returns successfully even when the
+    # broker never durably accepted the message, and a video silently stays in PROCESSING
+    # forever. Combined with mandatory=true in TranscoderMessagingConfig.
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    listener:
+      simple:
+        # Must be AUTO (the default) with a dead-letter chain. MANUAL would need explicit
+        # ack management across a multi-minute job, and requeue=true on failure loops forever.
+        acknowledge-mode: auto
+        missing-queues-fatal: true
+
+  lifecycle:
+    # Gives an in-flight ffmpeg job time to be killed cleanly by FfmpegExecutor#shutdown
+    # before the JVM exits, instead of the pod being SIGKILLed mid-encode.
+    timeout-per-shutdown-phase: 45s
+
+aws:
+  region: ${AWS_REGION}
+  credentials:
+    access-key: ${AWS_ACCESS_KEY_ID}
+    secret-key: ${AWS_SECRET_ACCESS_KEY}
+
+transcoder:
+
+  # ------------------------------- input limits -------------------------------
+  # 500 MB is a deliberately generous ceiling for the fallback path (uploads that were not
+  # normalised on device). It is enforced here, again in the video-service upload gate, and
+  # client-side before the presign is minted.
+  max-duration: 60s
+  max-upload-bytes: 500MB
+  max-source-width: 3840
+  max-source-height: 2160
+
+  # --------------------------------- ladder ----------------------------------
+  # Left unset: the built-in 9:16 ladder in TranscoderProperties#defaultLadder applies.
+  # To override, supply the full list, e.g.
+  #   ladder:
+  #     - { name: v0, width: 1080, height: 1920, videoKbps: 4500, maxrateKbps: 4710, bufsizeKbps: 9000 }
+  #     - { name: v1, width:  720, height: 1280, videoKbps: 2200, maxrateKbps: 2310, bufsizeKbps: 4400 }
+  output-fps: 30
+  segment-seconds: 2
+  audio-bitrate: 128k
+  audio-sample-rate: 48000
+  audio-channels: 2
+  x264-preset: veryfast
+  x264-profile: main
+
+  # -------------------------------- execution --------------------------------
+  ffmpeg-path: ffmpeg
+  ffprobe-path: ffprobe
+  # A 60s 6-rung ladder takes ~16s wall on 10 vCPU and ~60s on 4 vCPU. This budget is
+  # roughly 6x the expected worst case, so it only fires on a genuinely stuck process.
+  job-timeout: 10m
+  work-dir: ${TRANSCODER_WORK_DIR:/work}
+
+  # --------------------------------- upload ----------------------------------
+  upload-concurrency: 24
+  upload-timeout: 4m
+
+  # ------------------------------- thumbnails --------------------------------
+  # 10x10 = up to 100 candidate cover frames, enough for a client to scrub freely across a
+  # 60s clip. 240px wide tiles keep the sheet under ~1 MB.
+  sprite-columns: 10
+  sprite-rows: 10
+  sprite-tile-width: 240
+  sprite-jpeg-quality: 3
+
+  # --------------------------------- consumer --------------------------------
+  consumer:
+    # Set both to floor(vCPU / 2). Each ffmpeg process otherwise saturates every core, so
+    # more listeners than cores makes every job slower rather than the queue shorter.
+    concurrency: ${TRANSCODER_CONCURRENCY:2}
+    max-concurrency: ${TRANSCODER_CONCURRENCY:2}
+    # MUST stay at 1. At the default of 250 a worker hoards hundreds of unacked jobs and a
+    # crash loses all of them.
+    prefetch: 1
+    retry-attempts: 3
+    retry-initial-interval: PT15S
+    retry-multiplier: 2.0
+    retry-max-interval: PT2M
+
+  storage:
+    bucket-name: ${AWS_S3_BUCKET}
+    cdn-domain: ${CDN_DOMAIN}
+    output-prefix: hls
+    max-connections: 32
+    # Segments are immutable and content-addressed, so cache them essentially forever.
+    # Manifests get the same treatment: a video's ladder is never regenerated under the same
+    # videoId, so there is no staleness to guard against.
+    output-cache-control: public, max-age=31536000, immutable
+    playlist-cache-control: public, max-age=31536000, immutable
+
+server:
+  port: 8080
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      # Rabbit is the only reason this process cannot make progress, so readiness must fail
+      # without a broker connection. Health-check for a DB-less service should not be a
+      # rubber stamp.
+      show-details: never
+  health:
+    rabbit:
+      enabled: true
+
+logging:
+  level:
+    com.shortly.transcoderservice: ${TRANSCODER_LOG_LEVEL:INFO}
+    # bramp logs ffmpeg's full stderr at debug, which for a 6-rung ladder is enormous and is
+    # already captured deliberately by FfmpegExecutor.
+    net.bramp.ffmpeg: WARN

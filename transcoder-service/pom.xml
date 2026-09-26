@@ -8,59 +8,149 @@
         <version>4.1.1</version>
         <relativePath/>
     </parent>
-    <groupId>com.shortly</groupId>
     <artifactId>transcoder-service</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>transcoder-service</name>
-    <description>transcoder-service</description>
-    <url/>
-    <licenses>
-        <license/>
-    </licenses>
-    <developers>
-        <developer/>
-    </developers>
-    <scm>
-        <connection/>
-        <developerConnection/>
-        <tag/>
-        <url/>
-    </scm>
+    <description>FFmpeg worker: consumes uploaded originals and publishes an adaptive HLS ladder</description>
+
     <properties>
         <java.version>25</java.version>
     </properties>
+
     <dependencies>
+        <dependency>
+            <groupId>com.shortly</groupId>
+            <artifactId>common-contracts</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-amqp</artifactId>
         </dependency>
-
+        <!--
+            Actuator alone does not start an embedded server, so without this there is nothing
+            listening for the liveness/readiness probes and the container reports unhealthy
+            while working perfectly well. The worker has no business endpoints; this exists
+            only so the orchestrator can tell "alive" from "wedged".
+        -->
         <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-java-sdk</artifactId>
-            <version>1.12.797</version>
-            <scope>compile</scope>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webmvc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+        <!--
+            Brings Jackson 3 (tools.jackson). spring-boot-starter-amqp does not pull it in,
+            and this service needs it for the message converter and the idempotency sidecar.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-json</artifactId>
         </dependency>
 
+        <!--
+            AWS SDK v2, matching video-service. The previous com.amazonaws:aws-java-sdk
+            umbrella artifact transitively pulled ~340 service modules and produced a
+            388 MB jar; the scoped 's3' artifact is the only one this service needs.
+        -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>apache-client</artifactId>
+        </dependency>
+        <!-- Async transport for the segment upload fan-out; ~187 PUTs per video. -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>netty-nio-client</artifactId>
+        </dependency>
+
+        <!--
+            Used for FFprobe metadata parsing ONLY (rotation side-data, color_transfer for
+            HDR detection, per-stream dimensions). The transcode command itself is built
+            with ProcessBuilder because a multi-output filter_complex + var_stream_map
+            ladder is not cleanly expressible through bramp's builders.
+        -->
         <dependency>
             <groupId>net.bramp.ffmpeg</groupId>
             <artifactId>ffmpeg</artifactId>
             <version>0.9.2</version>
-            <scope>compile</scope>
         </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-amqp-test</artifactId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.amqp</groupId>
+            <artifactId>spring-rabbit-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
 
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>bom</artifactId>
+                <version>2.54.17</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <build>
+        <!--
+            Pinned so the Dockerfile's COPY path is stable. Without it the artifact is named
+            after the project version and the image build breaks the moment that changes -
+            which is exactly the bug this fixed once already.
+        -->
+        <finalName>transcoder-service</finalName>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <!--
+                    Version pinned explicitly. spring-boot-starter-parent declares the
+                    `repackage` execution but supplies no version, so Maven falls back to
+                    repository metadata and can resolve a different Spring Boot release than the
+                    one whose dependency management this module is using.
+                -->
+                <version>4.1.1</version>
+            </plugin>
+            <!--
+                *IT classes exercise the real ffmpeg binary and follow the failsafe naming
+                convention, so `mvn test` stays fast and hermetic while `mvn verify` actually runs
+                them. Without this they are compiled and then never executed.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>3.5.6</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
