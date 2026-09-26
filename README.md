@@ -2,7 +2,7 @@
 
 Shortly is a backend foundation for a short-video and reels platform. The product vision is for users to upload videos, watch an endless feed, and interact with creators through likes, follows, and comments, with asynchronous media processing and notifications.
 
-> **Current status:** This repository is an early backend prototype. The API gateway, user registration/JWT issuance, and the initial video upload flow have source-level implementations. The video module currently has a clean-build annotation-processing failure, documented below. The feed, interaction, notification, and transcoding services are still application scaffolds.
+> **Current status:** This repository is an early backend prototype. The API gateway, the full authentication lifecycle (register, login, refresh with rotation and reuse detection, logout, account lockout), the video upload flow, and the full HLS transcoding pipeline are implemented and verified end to end against a local stack by two script suites. The feed, interaction, and notification services are still application scaffolds. See [docs/authentication.md](docs/authentication.md) for the auth design and [docs/transcoding.md](docs/transcoding.md) for the media pipeline and its remaining gaps.
 
 ## What we are building
 
@@ -21,30 +21,38 @@ The current code implements the first two capabilities only in part. The remaini
 
 ```text
 .
-├── api-gateway/          JWT validation and HTTP routing
-├── auth-service/         User registration, persistence, and JWT issuance
+├── api-gateway/          JWT validation, header sanitizing, and HTTP routing
+├── auth-service/         Registration, sign-in, sessions, lockout, and profiles
 ├── video-service/        Video metadata, S3 presigned uploads, and event publishing
 ├── feed-service/         Feed service scaffold
 ├── interaction-service/  Likes, follows, and comments scaffold
 ├── notification-service/ Notifications, WebSocket, and push scaffold
-├── transcoder-service/   FFmpeg/media-processing worker scaffold
-├── docs/init-db.sql      Development database bootstrap
-├── docker-compose.yaml   Local PostgreSQL, Redis, and RabbitMQ
+├── transcoder-service/   FFmpeg worker: adaptive HLS ladder + cover art
+├── common-contracts/     Shared event, error, and internal-header contracts (no logic)
+├── common-jwt/           One HMAC JWT implementation, shared by gateway and auth
+├── shortly-ios/          Swift client (register, sign in, refresh, upload, profile)
+├── scripts/              e2e-auth-test.sh and e2e-pipeline-test.sh
+├── docs/                 authentication.md, ios-client.md, transcoding.md, init-db.sql
+├── docker-compose.yaml   The full local stack
 └── pom.xml               Maven reactor
 ```
 
 All services are independently packaged Spring Boot applications. The root `pom.xml` aggregates them but is not their parent POM.
+
+`common-contracts` is deliberately plain Java with no Spring on its classpath, so services can share a vocabulary without sharing a framework. `common-jwt` is the exception: it contains real behaviour, because two independent JWT implementations inevitably drift and reject each other's tokens.
 
 ## Architecture
 
 ### HTTP request flow
 
 ```text
-Client
+Client ──(Bearer JWT)──►
   │
   ▼
 API Gateway :8080
-  ├── /api/v1/auth/**         ──► Auth service :8081 ──► auth_db
+  │  verifies the JWT, rewrites the identity headers, adds X-Gateway-Secret
+  ├── /api/v1/auth/register|login|refresh|logout  ──► Auth service :8081 ──► auth_db
+  ├── /api/v1/auth/me       ──► Auth service :8081
   ├── /api/v1/videos/**       ──► Video service :8082 ──► video_db
   ├── /api/v1/interactions/** ──► Intended service :8083
   ├── /api/v1/feed/**         ──► Intended service :8084
@@ -63,34 +71,53 @@ The gateway currently uses fixed `localhost` destinations and does not use servi
 
 ### Authentication flow
 
-1. A client registers through `POST /api/v1/auth/register`.
-2. The auth service stores the user in PostgreSQL and hashes the password with BCrypt.
-3. The auth service returns a signed JWT containing the user ID as `sub` and the email as a custom claim. The configured default token lifetime is 24 hours.
-4. For non-auth routes, the gateway validates the JWT and replaces the downstream `X-User-Id` header with the token subject.
-5. The video service trusts that header for the current upload workflow.
+1. A client registers through `POST /api/v1/auth/register`, or signs in through `POST /api/v1/auth/login`.
+2. The auth service stores the user in PostgreSQL with a BCrypt (cost 12) password hash, and returns a **15-minute** access JWT plus an opaque 30-day refresh token.
+3. The access token carries the user ID as `sub` plus username and email claims. It is stateless and not revocable before expiry — the short lifetime *is* the revocation policy.
+4. The refresh token is stored only as a SHA-256 hash, rotated on every use, and grouped into a family. Replaying a rotated token revokes the whole family.
+5. For protected routes the gateway verifies the JWT, overwrites the downstream `X-User-Id` / `X-Username` / `X-Email` headers from the claims, and strips any inbound copy of them.
+6. The gateway adds `X-Gateway-Secret` from configuration; every service requires it, so a direct caller of a backend port cannot mint an identity. The video service injects a verified `CallerIdentity` into controllers rather than reading the raw header.
+7. Five consecutive failures lock the account for 15 minutes (`423`, with `retryAfterSeconds`).
 
-The current design does not yet provide login, refresh tokens, token revocation, or a complete service-to-service authentication model.
+Full detail, including the error contract and the reasoning behind each choice, is in [docs/authentication.md](docs/authentication.md).
 
 ## Current progress
 
 | Module | Responsibility | Current state |
 | --- | --- | --- |
-| `api-gateway` | JWT validation and routing | **Implemented baseline**. Public auth routes; Bearer JWT required for other gateway requests. |
-| `auth-service` | User registration and JWT issuance | **Partially implemented**. Registration and BCrypt persistence exist; login, refresh, and profile flows do not. |
-| `video-service` | Video records and direct uploads | **Partially implemented**. Presigned S3 URLs, metadata persistence, completion, retrieval, and event publishing exist in source; the module currently has a clean-build annotation-processing failure. |
+| `api-gateway` | JWT validation and routing | **Implemented**. Public auth routes; Bearer JWT required elsewhere; identity-header sanitizing; a separate internal secret added downstream. |
+| `common-contracts` | Shared event, error, and internal-header contracts | **Implemented**. Framework-free, so services share a vocabulary without a shared framework. |
+| `common-jwt` | JWT issuing and verification | **Implemented**. One HMAC implementation used by both the gateway and auth service, so tokens cannot drift apart. |
+| `auth-service` | Registration, sign-in, sessions, and profiles | **Implemented**. Register/login/refresh/logout/logout-all/me, refresh rotation with reuse detection, account lockout, non-enumerating failures. |
+| `video-service` | Video records and direct uploads | **Implemented**. Presigned S3 uploads, server-side upload verification via `HeadObject`, Flyway-managed schema, the full status lifecycle, cover-frame selection, and consumers for transcoder outcomes. |
 | `feed-service` | Infinite reels feed | **Scaffold**. Redis and PostgreSQL dependencies exist, but there is no feed logic, web API, persistence, or cache use. |
 | `interaction-service` | Likes, follows, and comments | **Scaffold**. AMQP, Redis, and PostgreSQL dependencies exist, but there are no APIs, entities, or listeners. |
 | `notification-service` | Notifications, WebSocket, and APNs | **Scaffold**. AMQP, WebSocket, PostgreSQL, and Pushy dependencies exist, but no delivery logic is implemented. |
-| `transcoder-service` | Asynchronous video processing | **Scaffold**. RabbitMQ, AWS SDK, and FFmpeg dependencies exist, but no consumer or FFmpeg worker is implemented. |
+| `shortly-ios` | Swift client | **Implemented**. Register, sign in, automatic access-token refresh with single-flight coordination, sign out, upload, and profile. Verified against the live stack. |
+| `transcoder-service` | Asynchronous video processing | **Implemented**. Consumes `VideoUploadedEvent`, probes with ffprobe, produces a 6-rung adaptive HLS ladder in a single ffmpeg process, generates poster and scrub sprite sheet, uploads to S3, and publishes `video.ready` / `video.failed`. |
 
 ### Implemented video behavior
 
+Full detail in [docs/transcoding.md](docs/transcoding.md).
+
 - Video creation generates a UUID and an S3 key in the form `raw/{userId}/{videoId}.{extension}`.
-- A presigned S3 `PUT` URL is valid for 15 minutes.
+- A presigned S3 `PUT` URL is valid for 15 minutes. The response also returns the platform's
+  size and duration ceilings so the client can reject bad input before spending bandwidth.
 - The client uploads the file directly to S3; video bytes do not pass through the application.
-- The completion endpoint checks the authenticated user ID, marks the record `READY`, creates a CDN URL, and publishes a `VideoUploadedEvent`.
-- The service supports `PENDING`, `UPLOADING`, `PROCESSING`, `READY`, and `FAILED` enum values, but only the `PENDING` to `READY` path is currently used.
-- The API does not currently verify that the object exists in S3 or that the uploaded file is a valid video.
+- The content type is checked against a video allow-list at the controller boundary.
+- The completion endpoint verifies the object with `HeadObject`. A missing, empty, or oversized
+  upload marks the record `FAILED`, returns `409`/`413` with a machine-readable problem code, and
+  deletes an oversized object immediately.
+- On success the record becomes `PROCESSING` and a `VideoUploadedEvent` is published. It never
+  becomes `READY` at this point — the video is not playable yet.
+- `READY` is set only by the transcoder's `video.ready` event, which carries the HLS manifest
+  URL, the produced ladder, the output geometry, the duration, and the cover-art URLs.
+- `FAILED` is set by `video.failed`, which carries a machine-readable reason
+  (`DURATION_EXCEEDED`, `SIZE_EXCEEDED`, `SOURCE_CORRUPT`, …) so the client can tell the user
+  which limit was hit.
+- The transcoder emits a 6-rung 9:16 ladder (1080x1920 down to 180x320), a poster frame, and a
+  sprite sheet the client uses for Instagram-style cover selection.
+- `PUT /api/v1/videos/{id}/thumbnail` records the user's chosen cover as a tile index.
 
 ## Requirements
 
@@ -111,6 +138,7 @@ The repository includes Maven Wrapper `3.9.16`; use `./mvnw` rather than relying
 | `6379` | Redis |
 | `5672` | RabbitMQ AMQP |
 | `15672` | RabbitMQ management port exposed by Compose |
+| `4566` | LocalStack S3 API (local development only) |
 | `8080` | API gateway |
 | `8081` | Auth service |
 | `8082` | Video service |
@@ -118,24 +146,44 @@ The repository includes Maven Wrapper `3.9.16`; use `./mvnw` rather than relying
 | `8084` | Reserved gateway destination for feed service |
 | `8086` | Reserved gateway destination for notification service |
 
-The feed, interaction, and notification YAML files currently do not set these reserved ports. The transcoder is intended to be a worker and has no HTTP port.
+The transcoder has no business endpoints. It binds `8080` inside its container for actuator
+liveness and readiness only, and the port is deliberately not published to the host. The feed,
+interaction, and notification YAML files currently do not set their reserved ports.
 
-## Local infrastructure
+## Local infrastructure and services
 
-Start the development infrastructure from the repository root:
+Bring up the whole local stack, including the video and transcoding services:
 
 ```bash
-docker compose up -d
+docker compose up -d --build
 docker compose ps
+```
+
+Then run the end-to-end pipeline test, which exercises upload, verification, transcoding, HLS
+fetch, cover selection, and the failure paths:
+
+```bash
+./scripts/e2e-pipeline-test.sh
 ```
 
 Compose provides:
 
-- PostgreSQL with development credentials `shortly_admin` / `shortly_password` and an initial `auth_db` database.
-- Redis without authentication.
-- RabbitMQ with development credentials `guest` / `guest`.
+| Service | Notes |
+| --- | --- |
+| `postgres` | Credentials `shortly_admin` / `shortly_password`, initial database `auth_db`. |
+| `redis` | No authentication. |
+| `rabbitmq` | Credentials `guest` / `guest`, management UI on `15672`. |
+| `localstack` | S3-compatible object storage on `4566`. Local development only. |
+| `localstack-init` | One-shot job that creates the bucket and applies the CORS policy. |
+| `video-service` | Port `8082`. |
+| `transcoder` | Worker. No published ports; actuator on `8080` inside the container. Capped at 4 CPUs with `/work` as a 2 GB tmpfs. |
 
-`docs/init-db.sql` creates `video_db`, `interaction_db`, `feed_db`, and `notification_db` when PostgreSQL initializes a new data volume. It does not create tables, indexes, or service schemas, and it does not rerun when an existing volume is reused.
+`docs/init-db.sql` creates `video_db`, `interaction_db`, `feed_db`, and `notification_db` when
+PostgreSQL initializes a new data volume. It does not rerun when an existing volume is reused.
+
+**The `videos` schema is owned by Flyway**, not by Hibernate — `ddl-auto` is `validate`, so a
+drift between the entity and the migrations fails the deploy rather than silently editing a
+production schema. Migrations live in `video-service/src/main/resources/db/migration`.
 
 Stop the containers without deleting their volumes:
 
@@ -143,17 +191,19 @@ Stop the containers without deleting their volumes:
 docker compose down
 ```
 
-The Compose file is for local development only. It does not build or start the Spring applications, S3, or a CDN.
+Everything above is local development only. The compose file does not model TLS, secrets,
+multi-AZ, or a CDN.
 
 ## Configuration
 
-Spring configuration is currently split between the YAML files and environment variables. The auth database URL and credentials are currently hard-coded in `auth-service/src/main/resources/application.yaml`; the video database and infrastructure settings are externalized.
+Spring configuration is currently split between the YAML files and environment variables. `docker-compose.yaml` wires the whole stack with working development defaults, so `docker compose up -d --build` needs no exports. For running a service in a terminal instead, export the variables below.
 
 ### Environment variables
 
 | Variable | Used by | Required | Notes |
 | --- | --- | --- | --- |
-| `JWT_SECRET` | Auth, gateway, video | Yes | Base64-encoded secret used to sign and validate HMAC JWTs. Auth and gateway must receive the same value. The video service currently declares it as `gateway.secret` but does not validate it. |
+| `JWT_SIGNING_SECRET` | Auth, gateway | Yes | Base64-encoded HMAC key for access tokens. Auth and gateway must receive the same value. Distinct from `GATEWAY_INTERNAL_SECRET`; never reuse one for the other. |
+| `GATEWAY_INTERNAL_SECRET` | Gateway, auth, video | Yes | Proves a request arrived through the gateway. The gateway adds it; every service validates it. Keep backend ports private regardless. |
 | `DB_HOST` | Video | Yes | PostgreSQL host, normally `localhost` for local development. |
 | `DB_PORT` | Video | Yes | PostgreSQL port, normally `5432`. |
 | `DB_USER` | Video | Yes | Video database user. |
@@ -171,7 +221,8 @@ Spring configuration is currently split between the YAML files and environment v
 For a local shell, export values before starting an application. Spring Boot does not automatically load a module's `.env` file:
 
 ```bash
-export JWT_SECRET="$(openssl rand -base64 32)"
+export JWT_SIGNING_SECRET="$(openssl rand -base64 32)"
+export GATEWAY_INTERNAL_SECRET="$(openssl rand -hex 32)"
 export DB_HOST="localhost"
 export DB_PORT="5432"
 export DB_USER="shortly_admin"
@@ -187,7 +238,7 @@ export AWS_S3_BUCKET="<existing-bucket>"
 export CDN_DOMAIN="https://cdn.example.com"
 ```
 
-Use the same `JWT_SECRET` in the terminals running the auth service and gateway. Generate it once and reuse that value; running the generation command independently in each terminal creates different secrets. The `openssl rand -base64 32` command produces a suitable local HMAC key; do not commit generated secrets or real AWS credentials.
+Use the same `JWT_SIGNING_SECRET` in the terminals running the auth service and gateway, and the same `GATEWAY_INTERNAL_SECRET` in the gateway and every downstream service. Generate each once and reuse the value; running the generation command independently in each terminal creates different secrets, and mismatched values fail closed. Do not commit generated secrets or real AWS credentials.
 
 The video service currently configures the AWS SDK with static credentials. Its S3 bucket, permissions, and CDN distribution must already exist. A browser client also needs an appropriate S3 CORS policy for the presigned `PUT` request.
 
@@ -199,14 +250,20 @@ Run the full Maven reactor from the repository root:
 ./mvnw clean verify
 ```
 
-> **Build health at this snapshot:** The other six service modules compile in the reactor, but `video-service` currently fails clean compilation because Lombok-generated constructors, accessors, builder methods, and log fields are not available to `javac`. The module's POM declares Lombok with the invalid Maven `annotationProcessor` dependency scope; fix that setup before treating the build as green.
+> **Build health at this snapshot:** the full reactor builds clean. `common-contracts`,
+> `video-service`, and `transcoder-service` have passing tests. `auth-service` has no tests:
+> its only candidate was a generated context-load test, and a context test cannot run without a
+> real database here — excluding the data layer just leaves `AuthService` with no
+> `UserRepository` to inject. Adding Testcontainers Postgres is the proper fix and is not done.
 
-Run one module's tests or application from the root:
+Run the whole build, or one module's tests:
 
 ```bash
-./mvnw -pl auth-service test
+./mvnw clean install
+
 ./mvnw -pl video-service test
-./mvnw -pl api-gateway test
+# `verify` also runs HlsCommandBuilderIT, which executes the real ffmpeg binary
+./mvnw -pl transcoder-service verify
 ```
 
 Start the three currently useful HTTP services in separate terminals, with the environment variables exported in each terminal:
@@ -217,9 +274,29 @@ Start the three currently useful HTTP services in separate terminals, with the e
 ./mvnw -f api-gateway/pom.xml spring-boot:run
 ```
 
-Start infrastructure first, then auth and video, and finally the gateway. The feed, interaction, notification, and transcoder modules do not yet provide a complete runnable platform flow.
+The whole stack comes up with `docker compose up -d --build`. The feed, interaction, and notification modules remain scaffolds.
 
-Every module currently has only a generated Spring context-load test. There are no endpoint, persistence, JWT, S3, RabbitMQ, transcoding, or integration tests. Auth and video context tests may require PostgreSQL and their normal configuration to be available.
+The gateway, auth, video, and transcoder services have real test coverage: 146 tests in total, including JWT expiry and tampering, refresh rotation and reuse detection, account lockout, gateway header sanitizing, and transcoding against real ffmpeg. To run the two end-to-end suites against a live stack:
+
+```bash
+./scripts/e2e-auth-test.sh       # 26 assertions through the gateway
+./scripts/e2e-pipeline-test.sh   # upload, transcode, verify HLS
+
+# The iOS client, against that same stack
+cd shortly-ios
+xcodebuild test -project Shortly.xcodeproj -scheme Shortly \
+  -destination 'platform=iOS Simulator,name=iPhone 18 Pro'
+```
+
+The iOS suite is 40 tests. `LiveBackendTests` and `LiveAuthUITests` exercise the real client and
+the real UI against the running stack and skip cleanly when it is absent. One test waits out a
+genuine access-token expiry, so it needs a short one:
+
+```bash
+ACCESS_TOKEN_TTL=20s docker compose up -d auth-service
+```
+
+See [docs/ios-client.md](docs/ios-client.md).
 
 ## HTTP API
 
@@ -239,16 +316,58 @@ curl -X POST "http://localhost:8080/api/v1/auth/register" \
   }'
 ```
 
-The request requires a nonblank username, a valid email, and a password of at least six characters. A successful response has this shape:
+The request requires a nonblank username, a valid email, and a password of **10 to 128 characters** (length only; composition rules mostly produce `Passw0rd!`). A successful response is `201 Created`:
 
 ```json
 {
-  "token": "<jwt>",
+  "token": "<access jwt, 15 min>",
+  "refreshToken": "<opaque, 30 days>",
+  "expiresIn": 900,
+  "refreshExpiresIn": 2592000,
+  "issuedAt": "2026-01-01T12:00:00Z",
   "userId": "<user-id>",
   "username": "alice",
   "email": "alice@example.com"
 }
 ```
+
+`token` is still the access token, so an existing client decoding `AuthSession { token, userId, username, email }` is unaffected; the refresh fields are additive and Swift ignores keys it does not know.
+
+### Sign in
+
+`POST /api/v1/auth/login` is public and accepts either the username or the email in `identifier`. It returns the same body as registration, with `200 OK`.
+
+```bash
+curl -X POST "http://localhost:8080/api/v1/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{"identifier": "alice", "password": "change-me-please"}'
+```
+
+An unknown account and a wrong password return the **same** `401 invalid-credentials` body, and the unknown-account path still performs a password hash so response timing does not enumerate accounts. Five consecutive failures lock the account:
+
+```json
+{
+  "type": "https://shortly.dev/problems/account-locked",
+  "title": "account-locked",
+  "status": 423,
+  "detail": "Account is temporarily locked. Try again in 900 seconds.",
+  "instance": "/api/v1/auth/login",
+  "code": "account-locked",
+  "retryAfterSeconds": 900
+}
+```
+
+### Refresh, logout, and profile
+
+| Method | Path | Body | Notes |
+| --- | --- | --- | --- |
+| `POST` | `/api/v1/auth/refresh` | `{"refreshToken": "..."}` | Rotates the token. A replay inside the 20 s grace window is tolerated; after that the whole family is revoked. |
+| `POST` | `/api/v1/auth/logout` | `{"refreshToken": "...", "allDevices": false}` | `204`. Idempotent. `allDevices: true` revokes every session. |
+| `GET` | `/api/v1/auth/me` | — | Requires `Authorization: Bearer`. Returns the profile and `activeSessionCount`. |
+
+### Error responses
+
+Every service returns RFC 9457 problem documents with a stable kebab-case `code` from the shared `ApiError` enum, so a client branches on the code rather than parsing prose. `token-expired` and `token-invalid` are separate codes even though both are `401`, because the recovery differs — retry with a refresh, or sign in again. Full table in [docs/authentication.md §4](docs/authentication.md).
 
 There is currently no login endpoint. A token is returned as part of registration, but there is no implemented password-authentication flow.
 
@@ -286,7 +405,14 @@ curl -X PUT "${UPLOAD_URL}" \
   --upload-file "./first-reel.mp4"
 ```
 
-Supported extension mapping is currently `video/quicktime` and `video/mov` to `.mov`, `video/webm` to `.webm`, and other or missing content types to `.mp4`.
+The declared content type must be one of `video/mp4`, `video/quicktime`, `video/x-m4v`,
+`video/webm`, or `video/x-matroska`; anything else is rejected with `400`. Extension mapping is
+`video/quicktime` to `.mov`, `video/x-m4v` to `.m4v`, `video/webm` to `.webm`,
+`video/x-matroska` to `.mkv`, and `video/mp4` to `.mp4`.
+
+For local runs against the compose stack, the presigned URL points at the in-container
+LocalStack hostname. Either add `127.0.0.1 localstack` to `/etc/hosts` or rewrite the hostname
+to `localhost:4566` before uploading. Against real S3 no change is needed.
 
 ### Complete and retrieve a video
 
@@ -343,37 +469,48 @@ VideoUploadedEvent
   createdAt
 ```
 
-Configured names are:
+Names live in `common-contracts` so there is exactly one definition of each. Both producer and
+consumer declare what they need with identical arguments, so the topology converges whichever
+service starts first.
 
-- Exchange: `video.exchange` (durable direct exchange)
-- Queue: `video.uploaded.queue` (durable queue)
-- Binding routing key: `video.uploaded`
+```
+video.exchange (topic, durable)
+  ├─ video.uploaded ─► video.uploaded.queue ─► transcoder-service
+  │                        └─ dead-letters to video.dlx / video.uploaded.dlq
+  ├─ video.ready    ─► video.ready.queue    ─► video-service
+  └─ video.failed   ─► video.failed.queue   ─► video-service
+```
 
-`RabbitMQConfig` declares the exchange, queue, and binding as explicit beans. `RabbitAdmin` provisions them when the first AMQP connection is established, after which the video service publishes the event. There is no Rabbit listener in any module, so the intended transcoder, feed, interaction, and notification consumers are not connected yet.
+`video-service` and `transcoder-service` both run listeners. The transcoder's consumer uses
+`prefetch: 1` (Spring's default of 250 would let one worker hoard hundreds of unacked
+multi-minute jobs and lose them all on a crash), bounded concurrency, a 3-attempt backoff
+retry, and a dead-letter chain so a poison message lands in the DLQ instead of hot-looping.
+Terminal failures (`DURATION_EXCEEDED`, `SOURCE_CORRUPT`, …) are published and swallowed rather
+than requeued, because retrying a permanently invalid input can never succeed.
+
+The feed, interaction, and notification consumers are still not connected.
 
 ## Known limitations and security notes
 
 These are important before exposing the services outside a trusted development machine:
 
-1. **Gateway-only authorization is incomplete.** Backend ports should remain private. A direct caller of port `8082` can currently supply an arbitrary `X-User-Id`, bypassing gateway JWT validation.
-2. **The internal gateway secret is unsafe as currently wired.** The gateway adds `JWT_SECRET` itself as `X-Gateway-Secret`, and no backend validates that header. Replace this with a separate internal secret and service-to-service authentication before production.
-3. **No login flow exists.** Registration returns a token, but passwords are not currently checked by an authentication endpoint.
-4. **Upload completion is client-asserted.** The service does not verify S3 existence, object size, checksum, content type, or media validity.
-5. **Transcoding is not implemented.** `UPLOADING`, `PROCESSING`, and `FAILED` have no transitions; the transcoder module has no listener or FFmpeg execution.
-6. **Messaging is incomplete.** The topology is declared, but consumers, retries, dead-letter handling, idempotency, and an outbox are absent.
-7. **The reserved services are not API-ready.** Their gateway routes, ports, and web dependencies are not wired consistently.
-8. **Validation and error contracts are incomplete.** Video request fields are not validated at the controller boundary, and domain errors are not mapped to a stable API error format.
-9. **Schema management is development-oriented.** Hibernate updates schemas in place; Flyway, indexes, cross-service constraints, and production migration strategy are not defined.
-10. **Operational controls are absent.** There is no CI, OpenAPI contract, observability setup, rate limiting, CORS policy, production profile, or secret-management setup.
-11. **The transcoder Dockerfile needs correction.** It copies `target/transcoder-service-1.0.0.jar`, while the POM currently produces a `0.0.1-SNAPSHOT` artifact.
-12. **The current video build is blocked.** `video-service` has source for the upload flow, but its POM declares Lombok with the invalid Maven `annotationProcessor` scope, so clean compilation does not see the generated members required by the controller, mapper, entity, and service implementation.
+1. **Playback URLs are unsigned.** Manifests and segments are publicly fetchable by anyone with the key. Add CloudFront signed cookies/URLs before public launch, or accept the exposure for a feed app.
+2. **Uploads are not resumable.** A single presigned `PUT`; a network drop on cellular restarts the transfer. Acceptable at the intended 15-40 MB with client-side retry. Presigned multipart is the fix, and is not yet built.
+3. **The upload size ceiling is not bucket-enforced.** AWS SDK v2 has no presigned POST, so the 500 MB limit is enforced at three application layers rather than by a bucket policy. See [docs/transcoding.md §3](docs/transcoding.md).
+4. **Messaging has no outbox.** `video-service` publishes inside its `@Transactional` boundary with publisher confirms but no outbox, so a commit/publish failure can still diverge. Events are idempotent on both sides, which bounds the damage but does not eliminate the window.
+5. **The reserved services are not API-ready.** Their gateway routes, ports, and web dependencies are not wired consistently.
+6. **Operational controls are absent.** There is no CI, OpenAPI contract, rate limiting, DLQ replay tooling, or reconciliation job for videos stuck in `PROCESSING`. S3 lifecycle rules for the `raw/` prefix are recommended but not provisioned.
+7. **Static AWS credentials are used for real buckets.** A local `video-service/.env` holds them and is gitignored, so nothing has leaked into the repository — but the service is configured with long-lived keys rather than an IAM role, which is what production should use.
+8. **Compose ships a default signing secret.** `JWT_SIGNING_SECRET` and `GATEWAY_INTERNAL_SECRET` both have development defaults in `docker-compose.yaml`. They are fine for a local stack and must be overridden everywhere else.
+9. **Authentication is still incomplete** — refresh tokens are Postgres-only, so there is no "sign out everywhere" across a fleet; there is no per-IP rate limiting; and there is no email verification, password reset, or MFA. The client now refreshes automatically, so this list is one item shorter than it was. See [docs/authentication.md §7](docs/authentication.md).
+10. **Display-matrix rotation is unverified end to end.** The probe logic is unit-tested, but ffmpeg's own decode-time rotation is not exercised, because ffmpeg 8 cannot write a display matrix to generate a fixture with. **Test with a real portrait iPhone clip before trusting it.** See [docs/transcoding.md](docs/transcoding.md).
 
 ## Roadmap
 
 The next milestones, in recommended order, are:
 
-1. **Harden authentication and service boundaries** — add login and refresh-token flows, stable error responses, downstream gateway-secret validation, and private service networking.
-2. **Complete the media pipeline** — verify uploaded objects, harden queue delivery, consume upload events, process with FFmpeg, persist processing states, and expose processed outputs.
+1. **Finish the session surface** — a Redis denylist for "sign out everywhere", a 401 refresh interceptor for the iOS client, per-IP rate limiting at the gateway, and email verification with password reset.
+2. **Wire the iOS client** — the backend is ready: `AuthResponse.token` is still the access token, so the existing `AuthSession` decodes unchanged, and the added refresh fields are ignored by Swift.
 3. **Implement interactions** — add idempotent likes, follows, and comments with ownership rules, persistence, and event publishing.
 4. **Build the feed** — add video-service integration, cursor pagination and ranking, personalization, Redis caching, and invalidation.
 5. **Implement notifications** — consume domain events, persist notification state, add WebSocket delivery, and configure APNs/device tokens.

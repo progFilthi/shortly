@@ -33,6 +33,22 @@
     </properties>
 
     <dependencies>
+        <!-- Shared event records, error codes, and the internal header protocol. -->
+        <dependency>
+            <groupId>com.shortly</groupId>
+            <artifactId>common-contracts</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
+        </dependency>
+        <!--
+            Shared access-token issuing and verification, so the gateway that checks a token and
+            this service that mints one cannot drift apart.
+        -->
+        <dependency>
+            <groupId>com.shortly</groupId>
+            <artifactId>common-jwt</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-flyway</artifactId>
@@ -48,6 +64,14 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webmvc</artifactId>
+        </dependency>
+        <!--
+            Liveness and readiness. Without it /actuator/health does not exist, so the container
+            health check 404s and the service is restarted in a loop while working perfectly well.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
         <dependency>
             <groupId>org.flywaydb</groupId>

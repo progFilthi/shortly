@@ -1,0 +1,14 @@
+# Test-only overrides.
+#
+# Two jobs: provide a signing key long enough for HS256 (the codec rejects anything shorter, by
+# design, and a test should not have to generate one), and switch off the gateway-secret check so
+# slice tests are not rejected before reaching a controller. GatewaySecretFilterTest covers the
+# check with it enabled.
+auth:
+  signing-secret: dGVzdC1vbmx5LXNpZ25pbmcta2V5LWZvci11bml0LXRlc3RzLW1hdC1iZS1sb25n
+  gateway-secret: test-gateway-secret
+  require-gateway-secret: false
+  bcrypt-cost: 4
+
+jwt:
+  secret: dGVzdC1vbmx5LXNpZ25pbmcta2V5LWZvci11bml0LXRlc3RzLW1hdC1iZS1sb25n

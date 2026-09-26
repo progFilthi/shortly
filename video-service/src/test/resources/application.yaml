@@ -1,0 +1,8 @@
+# Test-only overrides.
+#
+# The gateway-secret filter is a @Component and is therefore picked up by @WebMvcTest, so without
+# this every slice test would be rejected with 403 before reaching a controller. These tests cover
+# the controller and the error handler, not the filter; CallerIdentityFilterTest covers the filter
+# itself with the check enabled.
+gateway:
+  require-secret: false

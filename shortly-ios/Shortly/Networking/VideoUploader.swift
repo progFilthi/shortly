@@ -24,7 +24,15 @@ final class S3VideoUploader: VideoUploading {
         }
 
         guard (200..<300).contains(httpResponse.statusCode) else {
-            throw APIClientError.http(statusCode: httpResponse.statusCode, message: nil)
+            // S3 replies with its own XML error, not our problem document, so there is
+            // no code to switch on. A 403 here is nearly always an expired presigned URL
+            // rather than a permissions problem, and saying so saves the user from
+            // retrying a request that can never succeed.
+            let message: String? = httpResponse.statusCode == 403
+                ? "The upload link expired before the upload finished. Please try again."
+                : nil
+
+            throw APIClientError.server(statusCode: httpResponse.statusCode, code: nil, message: message)
         }
     }
 }

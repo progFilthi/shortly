@@ -26,8 +26,23 @@ enum SessionStoreError: LocalizedError {
 final class KeychainSessionStore: SessionStoring {
     private let service: String
     private let account = "current-session"
-    private let encoder = JSONEncoder()
-    private let decoder = JSONDecoder()
+
+    // `accessTokenExpiresAt` is a Date, and the default encoder writes it as a
+    // double of seconds since 2001. That works, but survives no inspection: a
+    // keychain dump is unreadable and a future migration has nothing to anchor on.
+    // ISO-8601 is written and read symmetrically here, unlike the server's
+    // nanosecond timestamps, which is why the wire format needs its own parser.
+    private let encoder: JSONEncoder = {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        return encoder
+    }()
+
+    private let decoder: JSONDecoder = {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return decoder
+    }()
 
     init(service: String = "com.shortly.ios.auth") {
         self.service = service

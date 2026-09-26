@@ -29,7 +29,7 @@ private struct RootView: View {
                         .foregroundStyle(.white)
                 }
             } else if appModel.session == nil {
-                RegistrationView()
+                AuthView()
             } else {
                 MainTabView()
             }

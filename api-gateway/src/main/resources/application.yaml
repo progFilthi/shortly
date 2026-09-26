@@ -1,47 +1,79 @@
 server:
   port: 8080
+  shutdown: graceful
 
 spring:
   application:
     name: api-gateway
+
   cloud:
     gateway:
       server:
         webmvc:
+          # The gateway is the only public entry point. No route exposes a service that has no
+          # route, and every route to a service carries the internal secret so the service can
+          # reject anything that did not come through here.
           routes:
             - id: auth-service
-              uri: http://localhost:8081
+              uri: ${AUTH_SERVICE_URI:http://localhost:8081}
               predicates:
                 - Path=/api/v1/auth/**
               filters:
-                - AddRequestHeader=X-Gateway-Secret, ${gateway.secret}
+                - AddRequestHeader=X-Gateway-Secret, ${gateway.internal-secret}
+
             - id: video-service
-              uri: http://localhost:8082
+              uri: ${VIDEO_SERVICE_URI:http://localhost:8082}
               predicates:
                 - Path=/api/v1/videos/**
               filters:
-                - AddRequestHeader=X-Gateway-Secret, ${gateway.secret}
+                - AddRequestHeader=X-Gateway-Secret, ${gateway.internal-secret}
+
             - id: interaction-service
-              uri: http://localhost:8083
+              uri: ${INTERACTION_SERVICE_URI:http://localhost:8083}
               predicates:
                 - Path=/api/v1/interactions/**
               filters:
-                - AddRequestHeader=X-Gateway-Secret, ${gateway.secret}
+                - AddRequestHeader=X-Gateway-Secret, ${gateway.internal-secret}
+
             - id: feed-service
-              uri: http://localhost:8084
+              uri: ${FEED_SERVICE_URI:http://localhost:8084}
               predicates:
                 - Path=/api/v1/feed/**
               filters:
-                - AddRequestHeader=X-Gateway-Secret, ${gateway.secret}
+                - AddRequestHeader=X-Gateway-Secret, ${gateway.internal-secret}
+
             - id: notification-service
-              uri: http://localhost:8086
+              uri: ${NOTIFICATION_SERVICE_URI:http://localhost:8086}
               predicates:
                 - Path=/api/v1/notifications/**
               filters:
-                - AddRequestHeader=X-Gateway-Secret, ${gateway.secret}
+                - AddRequestHeader=X-Gateway-Secret, ${gateway.internal-secret}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,gateway,info
+  endpoint:
+    health:
+      # /actuator/health/readiness is what the container health check calls. Without the probes
+      # group enabled that path does not exist and every instance is reported unhealthy.
+      probes:
+        enabled: true
+      show-details: never
 
 gateway:
-  secret: ${JWT_SECRET}
+  # Distinct from the JWT signing key. Sharing one would mean a leaked signing key also lets an
+  # attacker forge the gateway header and impersonate any user id to internal services.
+  internal-secret: ${GATEWAY_INTERNAL_SECRET}
+  jwt-issuer: shortly
 
 jwt:
-  secret: ${JWT_SECRET}
+  # Same key auth-service signs with; the shared JwtCodec enforces identical verification.
+  secret: ${JWT_SIGNING_SECRET}
+
+logging:
+  level:
+    com.shortly.apigateway: ${GATEWAY_LOG_LEVEL:INFO}
+    # The gateway logs every routed request at INFO by default, which drowns out anything useful.
+    org.springframework.cloud.gateway: ${GATEWAY_ROUTING_LOG_LEVEL:INFO}
