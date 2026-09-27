@@ -136,8 +136,19 @@ struct ProfileView: View {
                             selectedVideo = video
                         } label: {
                             ZStack {
-                                Rectangle()
-                                    .fill(.white.opacity(0.07))
+                                if let posterURL = video.posterURL {
+                                    AsyncImage(url: posterURL) { image in
+                                        image
+                                            .resizable()
+                                            .aspectRatio(contentMode: .fill)
+                                    } placeholder: {
+                                        Rectangle()
+                                            .fill(.white.opacity(0.07))
+                                    }
+                                } else {
+                                    Rectangle()
+                                        .fill(.white.opacity(0.07))
+                                }
                                 Image(systemName: "play.fill")
                                     .font(.title3.bold())
                                     .foregroundStyle(.white.opacity(0.8))
@@ -152,6 +163,7 @@ struct ProfileView: View {
                                 }
                             }
                             .aspectRatio(0.75, contentMode: .fit)
+                            .clipped()
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel("Play \(video.title)")

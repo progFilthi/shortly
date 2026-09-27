@@ -116,7 +116,8 @@ Full detail in [docs/transcoding.md](docs/transcoding.md).
   (`DURATION_EXCEEDED`, `SIZE_EXCEEDED`, `SOURCE_CORRUPT`, …) so the client can tell the user
   which limit was hit.
 - The transcoder emits a 6-rung 9:16 ladder (1080x1920 down to 180x320), a poster frame, and a
-  sprite sheet the client uses for Instagram-style cover selection.
+  sprite sheet the client uses for Instagram-style cover selection. Rungs that would upscale are
+  dropped, so a source below 1080x1920 gets fewer — the ladder definition is the cap, not a promise.
 - `PUT /api/v1/videos/{id}/thumbnail` records the user's chosen cover as a tile index.
 
 ## Requirements
@@ -147,7 +148,6 @@ transcoder is the exception: it is the only service still in Docker, and its por
 | `6379` | Redis (Docker) |
 | `5672` | RabbitMQ AMQP (Docker) |
 | `15672` | RabbitMQ management UI (Docker) |
-| `4566` | LocalStack S3, if you run one (not a Compose service) |
 | `8080` | API gateway |
 | `8081` | Auth service |
 | `8082` | Video service |
@@ -203,24 +203,28 @@ docker compose down
 Everything above is local development only. The compose file does not model TLS, secrets,
 multi-AZ, or a CDN.
 
-### Object storage is not in Compose
+### Object storage
 
-The host-run services default to `http://localhost:4566`. Start LocalStack yourself — the CLI, the
-desktop app, or its own container — then create the bucket and its CORS rule once:
+S3 is real AWS in every environment. There is no local object-storage emulator, and the services
+derive their endpoint from `AWS_REGION` — there is no endpoint override to configure. The bucket and
+its CORS rule are created once:
 
 ```bash
-S3_ENDPOINT=http://localhost:4566 ./scripts/init-local-storage.sh
+./scripts/init-s3-bucket.sh
 ```
 
 The CORS rule is not optional: it is what lets a browser `PUT` to the presigned URL.
 
-To use a real bucket, empty `AWS_ENDPOINT_URL` and override `AWS_REGION`, `AWS_S3_BUCKET`, and
-`CDN_DOMAIN`.
+Provide `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_S3_BUCKET`, and
+`CDN_DOMAIN`. The host-run services read them from `video-service/.env`; the transcoder container
+reads them from the repository-root `.env`, which `docker compose` substitutes automatically.
 
-The transcoder needs its own `AWS_ENDPOINT_URL`, because `localhost` inside a container is that
-container, not your machine. Compose defaults it to `http://host.docker.internal:4566` for exactly
-this reason. Its `CDN_DOMAIN` stays on `localhost`, because that value is only assembled into the
-URLs written into the HLS manifest — the transcoder never fetches it, the player does.
+> Do not set `AWS_ENDPOINT_URL` to an empty string to "unset" it. The AWS SDK reads that name as a
+> standard setting of its own, and an empty value makes it build a scheme-less endpoint, so the
+> service fails at startup with `The URI scheme of endpointOverride must not be null`.
+
+The transcoder's `CDN_DOMAIN` is the public playback origin, because that value is only assembled
+into the URLs written into the HLS manifest — the transcoder never fetches it, the player does.
 
 Then exercise the end-to-end pipeline, which covers upload, verification, transcoding, HLS fetch,
 cover selection, and the failure paths:
@@ -233,9 +237,11 @@ cover selection, and the failure paths:
 
 Each service's development configuration lives in its own `src/main/resources/application.yaml`,
 as `${VAR:default}` placeholders. The defaults are the local stack — Compose's published
-`localhost` ports, the `shortly_admin` database credentials, `guest` on the broker, LocalStack's
-placeholder AWS keys — so nothing has to be exported before a Run button. An environment variable
-of the same name always wins, which is how a real deployment overrides any of it.
+`localhost` ports, the `shortly_admin` database credentials, and `guest` on the broker — so nothing
+has to be exported before a Run button. The AWS keys are the exception: they default to the
+placeholder `test`, which cannot reach a real bucket, so S3 work needs a real key exported. An
+environment variable of the same name always wins, which is how a real deployment overrides any
+of it.
 
 ### Environment variables
 
@@ -255,8 +261,7 @@ of the same name always wins, which is how a real deployment overrides any of it
 | `AWS_ACCESS_KEY_ID` | Video, transcoder | `test` | Static AWS access key. |
 | `AWS_SECRET_ACCESS_KEY` | Video, transcoder | `test` | Static AWS secret key. |
 | `AWS_S3_BUCKET` | Video, transcoder | `shortly-videos-bucket` | Bucket that receives raw uploads. |
-| `AWS_ENDPOINT_URL` | Video, transcoder | `http://localhost:4566` | S3-compatible endpoint. **Set empty against real AWS.** |
-| `CDN_DOMAIN` | Video, transcoder | `http://localhost:4566/shortly-videos-bucket` | Base URL used to construct the public video URL. Must be reachable by the client. |
+| `CDN_DOMAIN` | Video, transcoder | `https://s3.us-east-1.amazonaws.com/shortly-videos-bucket` | Base URL used to construct the public video URL. Must be reachable by the client. |
 | `TRANSCODER_WORK_DIR` | Transcoder | `/work` (Compose) | ffmpeg scratch space. Compose mounts it as a 2 GB tmpfs. |
 | `ACCESS_TOKEN_TTL` | Auth | `15m` | Overridable so the iOS integration test can wait out a real expiry. |
 | `REFRESH_REUSE_GRACE` | Auth | `PT4S` | Shortened from the `PT20S` production default so the e2e script can exercise the grace window without sleeping 20s twice. |
@@ -271,7 +276,7 @@ export GATEWAY_INTERNAL_SECRET="$(openssl rand -hex 32)"
 
 Do not commit generated secrets or real AWS credentials. Spring Boot does not automatically load
 a module's `.env` file, so an IDE run configuration needs these as explicit environment
-variables — but for the local stack it does not need them at all.
+variables — point its env-file setting at the module's `.env`.
 
 The video service currently configures the AWS SDK with static credentials. Its S3 bucket,
 permissions, and CDN distribution must already exist. A browser client also needs an appropriate
@@ -445,9 +450,8 @@ The declared content type must be one of `video/mp4`, `video/quicktime`, `video/
 `video/quicktime` to `.mov`, `video/x-m4v` to `.m4v`, `video/webm` to `.webm`,
 `video/x-matroska` to `.mkv`, and `video/mp4` to `.mp4`.
 
-The presigned URL is built from `AWS_ENDPOINT_URL`, and for the host-run services that points at
-LocalStack on `localhost:4566`, so a browser upload needs no rewriting. Against real S3 no change is
-needed.
+The presigned URL is a genuine AWS URL derived from `AWS_REGION`, so a browser upload needs no
+rewriting.
 
 ### Complete and retrieve a video
 
@@ -535,8 +539,8 @@ These are important before exposing the services outside a trusted development m
 4. **Messaging has no outbox.** `video-service` publishes inside its `@Transactional` boundary with publisher confirms but no outbox, so a commit/publish failure can still diverge. Events are idempotent on both sides, which bounds the damage but does not eliminate the window.
 5. **The reserved services are not API-ready.** Their gateway routes, ports, and web dependencies are not wired consistently.
 6. **Operational controls are absent.** There is no CI, OpenAPI contract, rate limiting, DLQ replay tooling, or reconciliation job for videos stuck in `PROCESSING`. S3 lifecycle rules for the `raw/` prefix are recommended but not provisioned.
-7. **Static AWS credentials are used for real buckets.** A local `video-service/.env` holds them and is gitignored, so nothing has leaked into the repository — but the service is configured with long-lived keys rather than an IAM role, which is what production should use.
-8. **The application config ships default secrets and a LocalStack endpoint.** `JWT_SIGNING_SECRET`, `GATEWAY_INTERNAL_SECRET`, the database credentials, and `AWS_ENDPOINT_URL` all have development defaults in the gateway, auth, and video `application.yaml` files, so a local Run button works with nothing to export. They must be overridden by real environment variables everywhere else. The `test` AWS keys and the localhost endpoint are the sharpest edge: against real S3, `AWS_ENDPOINT_URL` has to be explicitly emptied.
+7. **Static AWS credentials are used for real buckets.** A local `video-service/.env` holds them and is gitignored, so nothing has leaked into the repository — but the service is configured with long-lived keys rather than an IAM role, which is what production should use. The exact permission set those keys need is in [docs/transcoding.md §8](docs/transcoding.md); note that `s3:ListBucket` is mandatory, not optional, because S3 otherwise answers `403` where the pipeline needs a `404`.
+8. **The application config ships default secrets and placeholder AWS keys.** `JWT_SIGNING_SECRET`, `GATEWAY_INTERNAL_SECRET`, and the database credentials all have development defaults in the gateway, auth, and video `application.yaml` files, so a local Run button works with nothing to export. They must be overridden by real environment variables everywhere else. The AWS keys default to `test` and cannot reach a real bucket. Note that `AWS_ENDPOINT_URL` is read by the AWS SDK itself: setting it empty does not fall back to the region, it breaks client construction.
 9. **Authentication is still incomplete** — refresh tokens are Postgres-only, so there is no "sign out everywhere" across a fleet; there is no per-IP rate limiting; and there is no email verification, password reset, or MFA. The client now refreshes automatically, so this list is one item shorter than it was. See [docs/authentication.md §7](docs/authentication.md).
 10. **Display-matrix rotation is unverified end to end.** The probe logic is unit-tested, but ffmpeg's own decode-time rotation is not exercised, because ffmpeg 8 cannot write a display matrix to generate a fixture with. **Test with a real portrait iPhone clip before trusting it.** See [docs/transcoding.md](docs/transcoding.md).
 

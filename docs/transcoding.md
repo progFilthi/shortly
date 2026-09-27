@@ -258,13 +258,23 @@ s3://bucket/
 ├── raw/{userId}/{videoId}.mp4              uploaded original
 └── hls/{videoId}/
     ├── master.m3u8                        uploaded LAST
-    ├── v0/index.m3u8  v0/seg_00000.ts …   6 renditions x (playlist + segments)
+    ├── v0/index.m3u8  v0/seg_00000.ts …   one dir per applicable rung
     ├── v1/ …
-    ├── v5/ …
+    ├── vN/ …
     ├── poster.jpg                         cover frame
     ├── sprite.jpg                         scrub sprite sheet, 10x10 grid
     └── ready.json                         sidecar: the exact VideoReadyEvent published
 ```
+
+**`v0 … vN` are positions in the *applicable* ladder, not rung names.** `MediaValidator#applicableRungs`
+drops rungs that would upscale, so a source below 1080x1920 gets fewer than the configured six — a
+720x1280 clip keeps three. ffmpeg's `v%v` expands to the variant index within the ladder it was
+actually asked to produce, and `master.m3u8` references its variants by those relative paths, so the
+S3 layout is indexed and contiguous from `v0`. The configured names (`v3`, `v4`, `v5`) are still
+carried in `RenditionInfo` for diagnostics, but they do not appear in any key. Keeping the index as
+the path segment is what makes the manifest's relative references resolve; addressing by configured
+name instead makes a short ladder look for a directory ffmpeg never wrote, and every such job fails
+after a successful encode.
 
 **Output keys are addressed by `videoId` only, with no user segment.** Content is immutable per
 video, and dropping the user from the path means one ladder serves every viewer through the CDN
@@ -283,6 +293,29 @@ correctness requirement, and an S3 lifecycle rule on `hls/` is an adequate backs
 
 Redelivery is normal — a consumer crash mid-job, a broker restart, a redeploy — and re-running a
 6-rung transcode is expensive enough to be worth avoiding.
+
+**This makes `s3:ListBucket` a hard requirement, not a nicety.** Both idempotency checks ask S3
+whether a key *does not* exist, and `TranscoderObjectStore#exists` maps only `404` to "absent".
+Without `s3:ListBucket` on the bucket, S3 is not permitted to reveal whether a key exists, so it
+answers **`403` instead of `404`** for every missing key. The idempotency guard then throws before
+ffmpeg is ever invoked, and every job fails permanently with a misleading `HEAD failed for
+s3://…/master.m3u8`. The symptom looks like a permissions bug in the pipeline; it is a missing
+bucket-level grant.
+
+`exists` deliberately does **not** treat `403` as "absent". Doing so would make a genuinely
+unauthorised caller look like a fresh video and start an expensive transcode it can never finish.
+
+**Required IAM permissions** for the key in `video-service/.env` and the repository-root `.env`:
+
+| Permission | Resource | Needed by |
+| --- | --- | --- |
+| `s3:GetObject` | `bucket/raw/*`, `bucket/hls/*` | Transcoder reads the original and verifies written output |
+| `s3:PutObject` | `bucket/hls/*` | Transcoder writes the ladder, poster, sprite, sidecar |
+| `s3:ListBucket` | `bucket` | **Required** — without it every absent-key check returns `403`, see above |
+| `s3:DeleteObject` | `bucket/raw/*`, `bucket/hls/*` | Video service deletes a rejected upload; transcoder reaps partial output. Without it both degrade to logged warnings and orphaned objects |
+
+A ready-to-attach policy is in [`docs/s3-iam-policy.json`](s3-iam-policy.json). Replace the bucket
+name if yours differs, and narrow `raw/*` and `hls/*` to the two prefixes rather than the whole bucket.
 
 **Recommended S3 lifecycle rules:**
 
@@ -378,9 +411,9 @@ docker compose up -d
 ./scripts/e2e-pipeline-test.sh      # full pipeline, including negative cases
 ```
 
-The compose stack brings up Postgres, RabbitMQ, Redis, LocalStack (S3), video-service and the
-transcoder. `scripts/init-local-storage.sh` creates the bucket and applies the CORS rule a
-presigned browser upload needs.
+The compose stack brings up Postgres, RabbitMQ, Redis, the video service and the transcoder. S3 is
+real AWS, configured from the repository-root `.env`. `scripts/init-s3-bucket.sh` creates the bucket
+and applies the CORS rule a presigned browser upload needs.
 
 ```bash
 ./mvnw -pl transcoder-service verify   # unit tests + real-ffmpeg integration tests
@@ -412,10 +445,6 @@ tests with mocks:
    transaction that then threw, so the count never left zero. Brute-force protection that looked
    implemented and was not. Fixed with a dedicated `LoginAttemptService` on `REQUIRES_NEW`.
 
-**Local note:** presigned URLs are minted with the in-container endpoint (`localstack:4566`),
-which the host cannot resolve, so the e2e script rewrites it to the published port. Against real
-S3 no rewrite is needed.
-
 ---
 
 ## 13. Known gaps
@@ -434,5 +463,5 @@ Honest list of what is not done:
 | **`raw/` retention unbounded** | Storage grows without limit. | Add the S3 lifecycle rule from §8. |
 | **HEVC/AV1 not offered** | H.264 only. | Fine for now. HEVC is a reasonable later rung for modern devices. |
 | ~~`X-Gateway-Secret` never validated~~ | **Fixed.** Split into `JWT_SIGNING_SECRET` and `GATEWAY_INTERNAL_SECRET`, with every service behind the gateway requiring the latter and controllers reading identity from an injected `CallerIdentity` rather than the raw header. | Verified by `CallerIdentityFilterTest` and the e2e suite. |
-| **Static AWS credentials** | Compose injects throwaway LocalStack credentials, and a real bucket is configured through a local `video-service/.env` that is gitignored and was never committed. Nothing has leaked, but the service authenticates with long-lived keys rather than an IAM role. | **Move to an IAM role** before production. Not a leak to remediate. |
+| **Static AWS credentials** | Compose and the host services both authenticate with long-lived keys read from gitignored `.env` files, so nothing has leaked into the repository — but neither uses an IAM role. | **Move to an IAM role** before production. Not a leak to remediate. |
 | **Display-matrix rotation unverified end to end** | Our probe logic is unit-tested, but ffmpeg's own decode-time rotation has **not** been exercised, because ffmpeg 8 cannot *write* a display matrix (`-display_rotation` is input-only and `-metadata rotate=` is silently ignored), so no rotated fixture can be produced here. A sideways feed is the symptom if the assumption is wrong. | **Test with a real portrait iPhone clip before trusting it.** If ffmpeg is not applying the matrix, add `-noautorotate` handling and a `transpose` filter driven by the probed angle. |

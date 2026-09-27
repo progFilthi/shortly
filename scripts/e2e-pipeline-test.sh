@@ -4,7 +4,6 @@ set -euo pipefail
 
 # Through the gateway, not straight to video-service.
 VIDEO_URL="${VIDEO_URL:-http://localhost:8080}"
-S3_PUBLIC="${S3_PUBLIC:-http://localhost:4566}"
 RABBIT_API="${RABBIT_API:-http://localhost:15672}"
 USER_ID="${USER_ID:-e2e-test-user}"
 DURATION="${DURATION:-8}"
@@ -26,10 +25,6 @@ trap 'dump_logs' ERR
 trap cleanup EXIT
 
 jq_get() { python3 -c "import json,sys;print(json.load(sys.stdin)$1)"; }
-
-# Presigns are generated with the in-container endpoint, which the host cannot resolve. Local-
-# networking artifact only: against real S3 the presign is a genuine AWS URL.
-to_public() { sed "s|http://localstack:4566|${S3_PUBLIC}|"; }
 
 # Uses auth_curl, so the video is attributed to the registered user rather than to whatever
 # identity the caller asserted.
@@ -104,7 +99,7 @@ pass "400"
 step "Requesting a presigned upload target"
 CREATE_RESPONSE=$(create_video "e2e test clip")
 VIDEO_ID=$(printf '%s' "$CREATE_RESPONSE" | jq_get "['videoId']")
-UPLOAD_URL=$(printf '%s' "$CREATE_RESPONSE" | jq_get "['uploadUrl']" | to_public)
+UPLOAD_URL=$(printf '%s' "$CREATE_RESPONSE" | jq_get "['uploadUrl']")
 MAX_BYTES=$(printf '%s' "$CREATE_RESPONSE" | jq_get "['maxBytes']")
 MAX_DURATION=$(printf '%s' "$CREATE_RESPONSE" | jq_get "['maxDurationSeconds']")
 [ -n "$VIDEO_ID" ] && [ -n "$UPLOAD_URL" ] || fail "no videoId/uploadUrl in: $CREATE_RESPONSE"
@@ -183,7 +178,7 @@ pass "6 rungs, 9:16 throughout, highest first"
 
 # ------------------------------------------------------------- fetch the real HLS
 step "Fetching master.m3u8 from object storage"
-HOST_MANIFEST=$(jq_get "['playbackUrl']" < "$WORKDIR/ready.json" | to_public)
+HOST_MANIFEST=$(jq_get "['playbackUrl']" < "$WORKDIR/ready.json")
 curl -sf "$HOST_MANIFEST" -o "$WORKDIR/master.m3u8" || fail "could not fetch $HOST_MANIFEST"
 grep -q '#EXTM3U' "$WORKDIR/master.m3u8" || fail "master.m3u8 is not a valid playlist"
 VARIANTS=$(grep -c '#EXT-X-STREAM-INF' "$WORKDIR/master.m3u8")
@@ -208,7 +203,7 @@ pass "all 6 renditions complete"
 
 step "Poster and sprite sheet exist"
 for KEY in posterUrl thumbnailSpriteUrl; do
-    URL=$(jq_get "['$KEY']" < "$WORKDIR/ready.json" | to_public)
+    URL=$(jq_get "['$KEY']" < "$WORKDIR/ready.json")
     curl -sf "$URL" -o "$WORKDIR/$KEY.jpg" || fail "$KEY not fetchable"
     printf '    %-20s %s\n' "$KEY" "$(du -h "$WORKDIR/$KEY.jpg" | cut -f1)"
 done
@@ -260,7 +255,7 @@ pass "ignored: status=READY duration=$DURATION renditions=$RENDITIONS"
 step "An undecodable upload fails terminally with a machine-readable reason"
 GARBAGE_RESPONSE=$(create_video "garbage bytes")
 GARBAGE_ID=$(printf '%s' "$GARBAGE_RESPONSE" | jq_get "['videoId']")
-GARBAGE_URL=$(printf '%s' "$GARBAGE_RESPONSE" | jq_get "['uploadUrl']" | to_public)
+GARBAGE_URL=$(printf '%s' "$GARBAGE_RESPONSE" | jq_get "['uploadUrl']")
 printf 'this is definitely not a video file' > "$WORKDIR/garbage.mp4"
 curl -s -o /dev/null -X PUT "$GARBAGE_URL" -H 'Content-Type: video/mp4' \
     --data-binary "@$WORKDIR/garbage.mp4"
