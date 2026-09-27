@@ -61,5 +61,5 @@ Restore the normal TTL afterwards with `docker compose up -d auth-service`.
 ## Current scope
 
 Sign up, sign in, silent access-token refresh, sign out, and the video list on the profile screen.
-Uploads work against LocalStack but have not been exercised from a physical device. Known gaps are
+Uploads go to a real S3 bucket but have not been exercised from a physical device. Known gaps are
 listed in [../docs/ios-client.md §8](../docs/ios-client.md).

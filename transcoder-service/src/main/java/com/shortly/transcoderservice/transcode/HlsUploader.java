@@ -45,18 +45,32 @@ public class HlsUploader {
     }
 
     /** Uploads every artifact for one job and returns the keys it wrote, so the caller can clean them
-     * up if a later step fails. @throws StorageException if any artifact fails to upload */
+     * up if a later step fails. @throws StorageException if any artifact fails to upload
+     *
+     * <p>Directories and S3 keys are addressed by the rendition's <em>position</em> in
+     * {@code renditionNames}, not by its configured name. {@code HlsCommandBuilder} emits
+     * {@code v%v}, which ffmpeg expands to the variant index within <em>this</em> invocation, and
+     * {@code master.m3u8} references its variants by those relative paths. When
+     * {@code MediaValidator#applicableRungs} drops rungs that would upscale, the applicable ladder is
+     * shorter than the configured one and the indices no longer coincide with the names: a 720x1280
+     * source keeps rungs {@code v3 v4 v5} but ffmpeg writes {@code v0 v1 v2}. Addressing by name
+     * therefore looks for a directory ffmpeg never created, and the job fails after a successful
+     * encode. The names are still used for diagnostics. */
     public List<String> upload(UUID videoId, Path hlsDir, List<String> renditionNames) {
         List<Upload> segments = new ArrayList<>();
         List<Upload> mediaPlaylists = new ArrayList<>();
-        Upload manifest = null;
 
-        for (String rendition : renditionNames) {
-            Path renditionDir = hlsDir.resolve(rendition);
+        for (int index = 0; index < renditionNames.size(); index++) {
+            String rungName = renditionNames.get(index);
+            String variant = variantDirName(index);
+
+            Path renditionDir = hlsDir.resolve(variant);
             if (!Files.isDirectory(renditionDir)) {
                 throw new StorageException(
                         "Expected rendition directory " + renditionDir + " does not exist;"
-                                + " ffmpeg reported success but produced no output");
+                                + " ffmpeg reported success but produced no output"
+                                + " (rung " + rungName + " is variant " + index + " of "
+                                + renditionNames.size() + ")");
             }
 
             Path playlist = renditionDir.resolve("index.m3u8");
@@ -64,12 +78,12 @@ public class HlsUploader {
                 throw new StorageException("Missing media playlist " + playlist);
             }
             mediaPlaylists.add(new Upload(
-                    storage.variantPlaylistKey(videoId, rendition), playlist,
+                    storage.variantPlaylistKey(videoId, variant), playlist,
                     storage.playlistContentType(), storage.playlistCacheControl()));
 
             for (Path segment : listSegments(renditionDir)) {
                 segments.add(new Upload(
-                        storage.segmentKey(videoId, rendition, segment.getFileName().toString()),
+                        storage.segmentKey(videoId, variant, segment.getFileName().toString()),
                         segment,
                         storage.segmentContentType(), storage.outputCacheControl()));
             }
@@ -79,7 +93,7 @@ public class HlsUploader {
         if (!Files.isRegularFile(manifestPath)) {
             throw new StorageException("ffmpeg did not produce " + manifestPath);
         }
-        manifest = new Upload(
+        Upload manifest = new Upload(
                 storage.manifestKey(videoId), manifestPath,
                 storage.playlistContentType(), storage.playlistCacheControl());
 
@@ -95,6 +109,12 @@ public class HlsUploader {
 
         log.info("Ladder for {} fully uploaded ({} objects)", videoId, keys.size());
         return List.copyOf(keys);
+    }
+
+    /** The directory name ffmpeg gives variant {@code index}, expanding the {@code v%v} pattern in
+     * the command builder. Must stay in step with {@code addHlsMuxerOptions}. */
+    private static String variantDirName(int index) {
+        return "v" + index;
     }
 
     /** Fans out with a bounded number of in-flight requests. */

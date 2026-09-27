@@ -78,16 +78,13 @@ services:
       RABBITMQ_PORT: 5672
       RABBITMQ_USER: guest
       RABBITMQ_PASSWORD: guest
-      AWS_REGION: us-east-1
-      AWS_ACCESS_KEY_ID: test
-      AWS_SECRET_ACCESS_KEY: test
-      AWS_S3_BUCKET: shortly-videos-bucket
-      # Not localhost: that is this container, not the host. host.docker.internal is how a container
-      # reaches an S3-compatible endpoint running on the developer's machine.
-      AWS_ENDPOINT_URL: ${AWS_ENDPOINT_URL:-http://host.docker.internal:4566}
-      # This one IS localhost, and deliberately: it is only ever assembled into the URLs written into
-      # the HLS manifest, never fetched by the transcoder.
-      CDN_DOMAIN: ${CDN_DOMAIN:-http://localhost:4566/shortly-videos-bucket}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:?set AWS_ACCESS_KEY_ID in the environment or a root .env}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:?set AWS_SECRET_ACCESS_KEY in the environment or a root .env}
+      AWS_S3_BUCKET: ${AWS_S3_BUCKET:-shortly-videos-bucket}
+      # Only ever assembled into the URLs written into the HLS manifest, never fetched by
+      # the transcoder, so it must be the public playback origin rather than an in-cluster address.
+      CDN_DOMAIN: ${CDN_DOMAIN:?set CDN_DOMAIN in the environment or a root .env}
       TRANSCODER_WORK_DIR: /work
       # Must be <= vCPU/2. Each ffmpeg process wants every core, so oversubscribing here makes every job
       # slower without shortening the queue.

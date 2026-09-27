@@ -180,22 +180,62 @@ struct Video: Decodable, Identifiable, Equatable {
     let id: UUID
     let title: String
     let description: String?
-    let uploadURL: URL?
+    let playbackUrl: URL?
+    let posterUrl: URL?
+    let thumbnailSpriteUrl: URL?
+    let thumbnailTileIndex: Int?
+    let durationSeconds: Int?
+    let width: Int?
+    let height: Int?
+    let sourceBytes: Int64?
     let userId: String
     let videoStatus: VideoStatus
+    let failureReason: String?
+    let failureMessage: String?
     let createdAt: String
+    let renditions: [Rendition]?
 
     enum CodingKeys: String, CodingKey {
         case id
         case title
         case description
-        case uploadURL = "uploadUrl"
+        case playbackUrl = "playbackUrl"
+        case posterUrl = "posterUrl"
+        case thumbnailSpriteUrl = "thumbnailSpriteUrl"
+        case thumbnailTileIndex = "thumbnailTileIndex"
+        case durationSeconds = "durationSeconds"
+        case width = "width"
+        case height = "height"
+        case sourceBytes = "sourceBytes"
         case userId
         case videoStatus
+        case failureReason = "failureReason"
+        case failureMessage = "failureMessage"
         case createdAt
+        case renditions
     }
 
     var playbackURL: URL? {
-        uploadURL
+        playbackUrl
+    }
+
+    var posterURL: URL? {
+        posterUrl
+    }
+
+    struct Rendition: Decodable, Equatable {
+        let name: String
+        let width: Int
+        let height: Int
+        let videoKbps: Int
+        let playlistUrl: URL
+
+        enum CodingKeys: String, CodingKey {
+            case name
+            case width
+            case height
+            case videoKbps = "videoKbps"
+            case playlistUrl = "playlistUrl"
+        }
     }
 }

@@ -175,7 +175,7 @@ of the tap rather than sleeping a fixed amount.
 
 | Gap | Impact | Recommendation |
 |---|---|---|
-| **No upload from the simulator to a real device** | The upload path is unit-tested and the backend E2E covers it, but not from the app. | Run the real flow on a device against LocalStack. |
+| **No upload from the simulator to a real device** | The upload path is unit-tested and the backend E2E covers it, but not from the app. | Run the real flow on a physical device against the real bucket. |
 | **Refresh is invisible to the user** | `activeSessionCount` is shown on the profile, but there is no session list to revoke from. | A "your devices" screen, and a way to sign out one session. |
 | **No session expiry is surfaced** | If the refresh token dies, the app returns to sign-in with no explanation. | Distinguish "signed out for safety" from "signed out by you". |
 | **No biometric lock** | The Keychain is `WhenUnlockedThisDeviceOnly`, so the token is gone when the device locks, but anyone who unlocks the phone has the app. | `LocalAuthentication` behind a launch gate. |

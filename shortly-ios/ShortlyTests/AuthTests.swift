@@ -184,10 +184,28 @@ final class APIClientTests: XCTestCase {
               "id": "11111111-1111-1111-1111-111111111111",
               "title": "First reel",
               "description": "A first upload",
-              "uploadUrl": "https://cdn.example.com/raw/user-1/video.mp4",
+              "playbackUrl": "https://cdn.example.com/hls/11111111-1111-1111-1111-111111111111/master.m3u8",
+              "posterUrl": "https://cdn.example.com/hls/11111111-1111-1111-1111-111111111111/poster.jpg",
+              "thumbnailSpriteUrl": "https://cdn.example.com/hls/11111111-1111-1111-1111-111111111111/sprite.jpg",
+              "thumbnailTileIndex": 0,
+              "durationSeconds": 30,
+              "width": 1080,
+              "height": 1920,
+              "sourceBytes": 5242880,
               "userId": "user-1",
               "videoStatus": "READY",
-              "createdAt": "2026-09-25T12:00:00"
+              "failureReason": null,
+              "failureMessage": null,
+              "createdAt": "2026-09-25T12:00:00",
+              "renditions": [
+                {
+                  "name": "1080p",
+                  "width": 1080,
+                  "height": 1920,
+                  "videoKbps": 5000,
+                  "playlistUrl": "https://cdn.example.com/hls/11111111-1111-1111-1111-111111111111/v3/playlist.m3u8"
+                }
+              ]
             }]
             """)
         }
@@ -198,6 +216,17 @@ final class APIClientTests: XCTestCase {
         XCTAssertEqual(video.id.uuidString, "11111111-1111-1111-1111-111111111111")
         XCTAssertEqual(video.videoStatus, .ready)
         XCTAssertEqual(video.playbackURL?.host, "cdn.example.com")
+        XCTAssertEqual(video.playbackURL?.path, "/hls/11111111-1111-1111-1111-111111111111/master.m3u8")
+        XCTAssertEqual(video.posterURL?.host, "cdn.example.com")
+        XCTAssertEqual(video.posterURL?.path, "/hls/11111111-1111-1111-1111-111111111111/poster.jpg")
+        XCTAssertEqual(video.thumbnailTileIndex, 0)
+        XCTAssertEqual(video.durationSeconds, 30)
+        XCTAssertEqual(video.width, 1080)
+        XCTAssertEqual(video.height, 1920)
+        XCTAssertEqual(video.sourceBytes, 5242880)
+        XCTAssertNotNil(video.renditions)
+        XCTAssertEqual(video.renditions?.count, 1)
+        XCTAssertEqual(video.renditions?.first?.name, "1080p")
     }
 
     // MARK: Problem decoding
